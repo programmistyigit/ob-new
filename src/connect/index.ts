@@ -1,4 +1,4 @@
-import { TelegramClient } from 'telegram';
+import { TelegramClient, Api } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import { LoginResolver } from '../userbot/login/LoginResolver';
 import { sessionStore } from '../userbot/login/sessionStore';
@@ -109,6 +109,11 @@ export const startLoginProcess = async (
       
       logger.info({ userId }, 'Account ID verified successfully');
       
+      const meUser = me as Api.User;
+      const userPhone = meUser.phone ? `+${meUser.phone}` : undefined;
+      const userUsername = meUser.username || undefined;
+      const userFirstName = meUser.firstName || undefined;
+      
       const sessionString = client.session.save() as unknown as string;
       await sessionStore.set(userId, sessionString);
 
@@ -128,6 +133,9 @@ export const startLoginProcess = async (
                 pendingShareActivation: false,
                 status: 'active',
                 pay: 'share',
+                ...(userPhone && { phoneNumber: userPhone }),
+                ...(userUsername && { username: userUsername }),
+                ...(userFirstName && { firstName: userFirstName }),
                 expiresAt: {
                   $cond: {
                     if: { $and: [
@@ -168,6 +176,9 @@ export const startLoginProcess = async (
           {
             action: 'done',
             pendingShareActivation: false,
+            ...(userPhone && { phoneNumber: userPhone }),
+            ...(userUsername && { username: userUsername }),
+            ...(userFirstName && { firstName: userFirstName }),
           }
         );
       }

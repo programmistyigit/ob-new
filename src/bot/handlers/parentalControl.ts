@@ -131,50 +131,71 @@ export const searchChild = async (ctx: Context, searchQuery: string) => {
     if (/^\d+$/.test(searchQuery)) {
       childId = Number(searchQuery);
     } else if (searchQuery.startsWith('@') || searchQuery.startsWith('+')) {
-      const { getActiveClient } = await import('../../userbot/runUserBot');
-      const client = getActiveClient(userId);
+      let foundInDb = false;
       
-      if (!client) {
-        const notConnectedText = lang === 'uz'
-          ? '❌ Avval akkauntingizni ulang: /connect'
-          : lang === 'en'
-          ? '❌ Connect your account first: /connect'
-          : '❌ Сначала подключите аккаунт: /connect';
-        
-        await ctx.reply(notConnectedText);
-        await BotUser.findOneAndUpdate({ userId }, { action: 'done' });
-        return;
+      if (searchQuery.startsWith('@')) {
+        const dbUser = await BotUser.findOne({ username: searchQuery.substring(1) });
+        if (dbUser) {
+          childId = dbUser.userId;
+          foundInDb = true;
+          logger.info({ searchQuery, childId }, 'Found user by username in DB');
+        }
+      } else if (searchQuery.startsWith('+')) {
+        const dbUser = await BotUser.findOne({ phoneNumber: searchQuery });
+        if (dbUser) {
+          childId = dbUser.userId;
+          foundInDb = true;
+          logger.info({ searchQuery, childId }, 'Found user by phone in DB');
+        }
       }
-
-      try {
-        const { Api } = await import('telegram');
-        const targetEntity = await client.getEntity(searchQuery);
+      
+      if (!foundInDb) {
+        const { getActiveClient } = await import('../../userbot/runUserBot');
+        const client = getActiveClient(userId);
         
-        if (!(targetEntity instanceof Api.User)) {
-          const notUserText = lang === 'uz'
-            ? '❌ Bu foydalanuvchi emas (guruh yoki kanal).'
+        if (!client) {
+          const notConnectedText = lang === 'uz'
+            ? '❌ Avval akkauntingizni ulang: /connect'
             : lang === 'en'
-            ? '❌ This is not a user (group or channel).'
-            : '❌ Это не пользователь (группа или канал).';
+            ? '❌ Connect your account first: /connect'
+            : '❌ Сначала подключите аккаунт: /connect';
           
-          await ctx.reply(notUserText);
+          await ctx.reply(notConnectedText);
           await BotUser.findOneAndUpdate({ userId }, { action: 'done' });
           return;
         }
 
-        childId = Number(targetEntity.id);
-      } catch (error: any) {
-        logger.warn({ searchQuery, error: error.message }, 'Failed to find user via Telegram API');
-        
-        const notFoundText = lang === 'uz'
-          ? '❌ Foydalanuvchi topilmadi. Username yoki telefon raqamni tekshiring.'
-          : lang === 'en'
-          ? '❌ User not found. Check the username or phone number.'
-          : '❌ Пользователь не найден. Проверьте username или номер телефона.';
-        
-        await ctx.reply(notFoundText);
-        await BotUser.findOneAndUpdate({ userId }, { action: 'done' });
-        return;
+        try {
+          const { Api } = await import('telegram');
+          const targetEntity = await client.getEntity(searchQuery);
+          
+          if (!(targetEntity instanceof Api.User)) {
+            const notUserText = lang === 'uz'
+              ? '❌ Bu foydalanuvchi emas (guruh yoki kanal).'
+              : lang === 'en'
+              ? '❌ This is not a user (group or channel).'
+              : '❌ Это не пользователь (группа или канал).';
+            
+            await ctx.reply(notUserText);
+            await BotUser.findOneAndUpdate({ userId }, { action: 'done' });
+            return;
+          }
+
+          childId = Number(targetEntity.id);
+          logger.info({ searchQuery, childId }, 'Found user via Telegram API');
+        } catch (error: any) {
+          logger.warn({ searchQuery, error: error.message }, 'Failed to find user via Telegram API and DB');
+          
+          const notFoundText = lang === 'uz'
+            ? '❌ Foydalanuvchi topilmadi.\n\n💡 Bu user botdan foydalanmagan bo\'lishi mumkin yoki privacy sozlamalari yopiq.'
+            : lang === 'en'
+            ? '❌ User not found.\n\n💡 This user may not be using the bot or has strict privacy settings.'
+            : '❌ Пользователь не найден.\n\n💡 Этот пользователь может не использовать бота или имеет строгие настройки приватности.';
+          
+          await ctx.reply(notFoundText);
+          await BotUser.findOneAndUpdate({ userId }, { action: 'done' });
+          return;
+        }
       }
     } else {
       const invalidFormatText = lang === 'uz'

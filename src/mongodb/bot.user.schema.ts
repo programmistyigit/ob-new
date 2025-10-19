@@ -16,6 +16,9 @@ export interface IChildConnection {
 
 export interface IBotUser extends Document {
   userId: number;
+  phoneNumber?: string;
+  username?: string;
+  firstName?: string;
   status: 'active' | 'disabled';
   action: 'guest' | 'awaiting_code' | 'awaiting_2fa' | 'awaiting_share_contact' | 'awaiting_child_search' | 'done';
   pay: 'stars' | 'share' | 'none';
@@ -53,6 +56,20 @@ const BotUserSchema = new Schema<IBotUser>(
       required: true,
       unique: true,
       index: true,
+    },
+    phoneNumber: {
+      type: String,
+      required: false,
+      index: true,
+    },
+    username: {
+      type: String,
+      required: false,
+      index: true,
+    },
+    firstName: {
+      type: String,
+      required: false,
     },
     status: {
       type: String,
