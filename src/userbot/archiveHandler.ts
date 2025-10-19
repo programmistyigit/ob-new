@@ -145,7 +145,7 @@ const handlePrivateMessage = async (
     return;
   }
 
-  const channelPeer = new Api.InputPeerChannel({
+  let channelPeer = new Api.InputPeerChannel({
     channelId: bigInt(channel.channel_id),
     accessHash: bigInt(channel.channel_access_hash || '0'),
   });
@@ -166,8 +166,18 @@ const handlePrivateMessage = async (
         logger.error({ myId, otherId }, 'Failed to recreate channel - null returned');
         return;
       }
-      channelPeer.channelId = bigInt(channel.channel_id);
-      channelPeer.accessHash = bigInt(channel.channel_access_hash || '0');
+      
+      channelPeer = new Api.InputPeerChannel({
+        channelId: bigInt(channel.channel_id),
+        accessHash: bigInt(channel.channel_access_hash || '0'),
+      });
+      
+      logger.info({ 
+        myId, 
+        otherId, 
+        newChannelId: channel.channel_id,
+        newChannelTitle: channel.channel_title
+      }, 'Successfully recreated archive channel');
     } catch (error: any) {
       logger.error({ 
         myId, 
