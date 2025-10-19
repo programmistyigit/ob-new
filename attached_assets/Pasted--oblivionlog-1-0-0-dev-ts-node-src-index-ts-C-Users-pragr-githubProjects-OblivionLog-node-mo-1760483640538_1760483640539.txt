@@ -1,0 +1,125 @@
+> oblivionlog@1.0.0 dev
+> ts-node src/index.ts
+
+C:\Users\pragr\githubProjects\OblivionLog\node_modules\ts-node\src\index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+src/userbot/archiveHandler.ts:252:34 - error TS2339: Property 'phone' does not exist on type 'Document<unknown, {}, IBotUser, {}, {}> & IBotUser & Required<{ _id: unknown; }> & { __v: number; }'.
+
+252     const childName = childUser?.phone || `Child_${childId}`;
+                                     ~~~~~
+src/userbot/archiveHandler.ts:307:18 - error TS2304: Cannot find name 'channelCache'.
+
+307   const cached = channelCache.get(channelKey);
+                     ~~~~~~~~~~~~
+src/userbot/archiveHandler.ts:311:21 - error TS2352: Conversion of type 'TotalList<Dialog>' to type 'Dialog[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'push' are incompatible.
+    Type '(...items: import("C:/Users/pragr/githubProjects/OblivionLog/node_modules/telegram/tl/custom/dialog").Dialog[]) => number' is not comparable to type '(...items: import("C:/Users/pragr/githubProjects/OblivionLog/node_modules/telegram/tl/api").Api.Dialog[]) => number'.
+      Types of parameters 'items' and 'items' are incompatible.
+        Type 'Dialog' is missing the following properties from type 'Dialog': _client, dialog, archived, date, and 5 more.
+
+311     const dialogs = (await client.getDialogs({ limit: 100 })) as Api.Dialog[];
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/userbot/archiveHandler.ts:314:11 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+314         d.entity instanceof Api.Channel &&
+              ~~~~~~
+src/userbot/archiveHandler.ts:315:11 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+315         d.entity.title === `📁 ${childName}` &&
+              ~~~~~~
+src/userbot/archiveHandler.ts:316:11 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+316         d.entity.megagroup === false
+              ~~~~~~
+src/userbot/archiveHandler.ts:319:30 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+319     if (existing && existing.entity instanceof Api.Channel) {
+                                 ~~~~~~
+src/userbot/archiveHandler.ts:320:41 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+320       const channelId = Number(existing.entity.id);
+                                            ~~~~~~
+src/userbot/archiveHandler.ts:321:7 - error TS2304: Cannot find name 'channelCache'.
+
+321       channelCache.set(channelKey, channelId);
+          ~~~~~~~~~~~~
+src/userbot/archiveHandler.ts:336:35 - error TS2339: Property 'chats' does not exist on type 'TypeUpdates'.
+  Property 'chats' does not exist on type 'UpdatesTooLong'.
+
+336   const channelId = Number(result.chats[0].id);
+                                      ~~~~~
+src/userbot/archiveHandler.ts:337:3 - error TS2304: Cannot find name 'channelCache'.
+
+337   channelCache.set(channelKey, channelId);
+      ~~~~~~~~~~~~
+src/userbot/archiveHandler.ts:350:18 - error TS2304: Cannot find name 'channelCache'.
+
+350   const cached = channelCache.get(channelKey);
+                     ~~~~~~~~~~~~
+src/userbot/archiveHandler.ts:354:21 - error TS2352: Conversion of type 'TotalList<Dialog>' to type 'Dialog[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'push' are incompatible.
+    Type '(...items: import("C:/Users/pragr/githubProjects/OblivionLog/node_modules/telegram/tl/custom/dialog").Dialog[]) => number' is not comparable to type '(...items: import("C:/Users/pragr/githubProjects/OblivionLog/node_modules/telegram/tl/api").Api.Dialog[]) => number'.
+      Types of parameters 'items' and 'items' are incompatible.
+        Type 'Dialog' is missing the following properties from type 'Dialog': _client, dialog, archived, date, and 5 more.
+
+354     const dialogs = (await client.getDialogs({ limit: 100 })) as Api.Dialog[];
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/userbot/archiveHandler.ts:357:11 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+357         d.entity instanceof Api.Channel &&
+              ~~~~~~
+src/userbot/archiveHandler.ts:358:11 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+358         d.entity.title === contactName &&
+              ~~~~~~
+src/userbot/archiveHandler.ts:359:11 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+359         d.entity.megagroup === false
+              ~~~~~~
+src/userbot/archiveHandler.ts:362:30 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+362     if (existing && existing.entity instanceof Api.Channel) {
+                                 ~~~~~~
+src/userbot/archiveHandler.ts:363:41 - error TS2339: Property 'entity' does not exist on type 'Dialog'.
+
+363       const channelId = Number(existing.entity.id);
+                                            ~~~~~~
+src/userbot/archiveHandler.ts:364:7 - error TS2304: Cannot find name 'channelCache'.
+
+364       channelCache.set(channelKey, channelId);
+          ~~~~~~~~~~~~
+src/userbot/archiveHandler.ts:379:35 - error TS2339: Property 'chats' does not exist on type 'TypeUpdates'.
+  Property 'chats' does not exist on type 'UpdatesTooLong'.
+
+379   const channelId = Number(result.chats[0].id);
+                                      ~~~~~
+src/userbot/archiveHandler.ts:380:3 - error TS2304: Cannot find name 'channelCache'.
+
+380   channelCache.set(channelKey, channelId);
+      ~~~~~~~~~~~~
+src/userbot/archiveHandler.ts:416:34 - error TS2339: Property 'phone' does not exist on type 'Document<unknown, {}, IBotUser, {}, {}> & IBotUser & Required<{ _id: unknown; }> & { __v: number; }'.
+
+416     const childName = childUser?.phone || `Child ${childId}`;
+                                     ~~~~~
+
+    at createTSError (C:\Users\pragr\githubProjects\OblivionLog\node_modules\ts-node\src\index.ts:859:12)
+    at reportTSError (C:\Users\pragr\githubProjects\OblivionLog\node_modules\ts-node\src\index.ts:863:19)
+    at getOutput (C:\Users\pragr\githubProjects\OblivionLog\node_modules\ts-node\src\index.ts:1077:36)
+    at Object.compile (C:\Users\pragr\githubProjects\OblivionLog\node_modules\ts-node\src\index.ts:1433:41)
+    at Module.m._compile (C:\Users\pragr\githubProjects\OblivionLog\node_modules\ts-node\src\index.ts:1617:30)
+    at loadTS (node:internal/modules/cjs/loader:1826:10)
+    at Object.require.extensions.<computed> [as .ts] (C:\Users\pragr\githubProjects\OblivionLog\node_modules\ts-node\src\index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14) {
+  diagnosticCodes: [
+    2339, 2304, 2352, 2339,
+    2339, 2339, 2339, 2339,
+    2304, 2339, 2304, 2304,
+    2352, 2339, 2339, 2339,
+    2339, 2339, 2304, 2339,
+    2304, 2339
+  ]
+}

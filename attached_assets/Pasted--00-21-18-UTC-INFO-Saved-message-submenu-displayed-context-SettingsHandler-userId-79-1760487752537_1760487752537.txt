@@ -1,0 +1,78 @@
+[00:21:18 UTC] INFO: Saved message submenu displayed
+    context: "SettingsHandler"
+    userId: 7996386860
+[00:21:21 UTC] INFO: Settings displayed
+    context: "SettingsHandler"
+    userId: 7996386860
+[00:21:21 UTC] INFO: Back to main settings
+    context: "SettingsHandler"
+    userId: 7996386860
+[00:21:57 UTC] INFO: Processing PM
+    context: "ArchiveHandler"
+    myId: 8492379572
+    otherId: 7996386860
+    direction: "me->other"
+    messageId: 3496
+[00:21:57 UTC] INFO: Creating archive channel
+    context: "ArchiveHandler"
+    myId: 8492379572
+    otherId: "7996386860"
+    title: "Begzod"
+[00:21:57 UTC] INFO: Processing PM
+    context: "ArchiveHandler"
+    myId: 7996386860
+    otherId: 8492379572
+    direction: "other->me"
+    messageId: 24107
+[00:21:57 UTC] INFO: Creating archive channel
+    context: "ArchiveHandler"
+    myId: 7996386860
+    otherId: "8492379572"
+    title: "Nafisa"
+[00:21:57 UTC] WARN: Failed to create personal archive folder
+    context: "ArchiveHandler"
+    error: "400: MESSAGE_TOO_LONG (caused by messages.UpdateDialogFilter)"
+[00:21:58 UTC] WARN: Failed to create personal archive folder
+    context: "ArchiveHandler"
+    error: "400: MESSAGE_TOO_LONG (caused by messages.UpdateDialogFilter)"
+[00:21:58 UTC] INFO: Message forwarded
+    context: "ArchiveHandler"
+    myId: 8492379572
+    otherId: 7996386860
+    messageId: 3496
+[00:21:58 UTC] INFO: Processed successfully
+    context: "ArchiveHandler"
+    myId: 8492379572
+    otherId: 7996386860
+    messageId: 3496
+[00:21:58 UTC] INFO: Message forwarded
+    context: "ArchiveHandler"
+    myId: 7996386860
+    otherId: 8492379572
+    messageId: 24107
+[00:21:58 UTC] INFO: Processed successfully
+    context: "ArchiveHandler"
+    myId: 7996386860
+    otherId: 8492379572
+    messageId: 24107
+[00:21:58 UTC] INFO: Forwarding to parent monitoring
+    context: "ArchiveHandler"
+    myId: 7996386860
+    parentCount: 1
+[00:21:58 UTC] WARN: Failed to create dialog filter, using default
+    context: "ArchiveHandler"
+    error: "400: FILTER_ID_INVALID (caused by messages.UpdateDialogFilter)"
+[2025-10-15T05:21:59.599] [INFO] - [Sleeping for 3s on flood wait (Caused by channels.CreateChannel)]
+[00:22:02 UTC] INFO: Added contact channel to dialog filter
+    context: "ArchiveHandler"
+    parentId: 8492379572
+    contactId: "8492379572"
+    channelId: 3193396093
+    folderId: 1
+[00:22:03 UTC] WARN: Forward failed, sending with metadata
+    context: "ArchiveHandler"
+    error: "400: CHANNEL_INVALID (caused by messages.ForwardMessages)"
+[00:22:03 UTC] INFO: Sent to parent monitoring channel
+    context: "ArchiveHandler"
+    parentId: 8492379572
+    childId: 7996386860

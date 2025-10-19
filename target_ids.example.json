@@ -1,0 +1,23 @@
+[
+  {
+    "target": {
+      "id": null,
+      "userID": "example_username",
+      "phone": "+998901234567"
+    }
+  },
+  {
+    "target": {
+      "id": 123456789,
+      "userID": null,
+      "phone": null
+    }
+  },
+  {
+    "target": {
+      "id": null,
+      "userID": null,
+      "phone": "+998955984455"
+    }
+  }
+]

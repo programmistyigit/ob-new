@@ -1,0 +1,18 @@
+95837e648c298.tmp"
+[2025-10-15T02:01:53.310] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072]
+[21:01:53 UTC] WARN: Media handling attempt failed
+    context: "ArchiveHandler"
+    attempt: 3
+    maxRetries: 3
+    messageId: 23956
+    error: "Could not create buffer from file C:\\Users\\pragr\\githubProjects\\OblivionLog\\archives_media\\5fb0f3caa4a50b84555210f1.tmp"
+[21:01:53 UTC] ERROR: All media handling attempts failed
+    context: "ArchiveHandler"
+    messageId: 23956
+    stack: "Error: Could not create buffer from file C:\Users\pragr\githubProjects\OblivionLog\archives_media\5fb0f3caa4a50b84555210f1.tmp\n    at fileToBuffer (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\uploads.js:512:15)\n    at getFileBuffer (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\uploads.js:68:44)\n    at Object.uploadFile (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\uploads.js:81:26)\n    at TelegramClient.uploadFile (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\TelegramClient.js:879:30)\n    at handleMedia (C:\Users\pragr\githubProjects\OblivionLog\src\userbot\archiveHandler.ts:330:41)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async handlePrivateMessage (C:\Users\pragr\githubProjects\OblivionLog\src\userbot\archiveHandler.ts:163:17)\n    at async C:\Users\pragr\githubProjects\OblivionLog\src\userbot\archiveHandler.ts:56:9\n    at async _dispatchUpdate (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\updates.js:146:21)"
+    error: "Could not create buffer from file C:\\Users\\pragr\\githubProjects\\OblivionLog\\archives_media\\5fb0f3caa4a50b84555210f1.tmp"
+[21:01:53 UTC] ERROR: Error in archive handler
+    context: "ArchiveHandler"
+    stack: "Error: Could not create buffer from file C:\Users\pragr\githubProjects\OblivionLog\archives_media\5fb0f3caa4a50b84555210f1.tmp\n    at fileToBuffer (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\uploads.js:512:15)\n    at getFileBuffer (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\uploads.js:68:44)\n    at Object.uploadFile (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\uploads.js:81:26)\n    at TelegramClient.uploadFile (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\TelegramClient.js:879:30)\n    at handleMedia (C:\Users\pragr\githubProjects\OblivionLog\src\userbot\archiveHandler.ts:330:41)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async handlePrivateMessage (C:\Users\pragr\githubProjects\OblivionLog\src\userbot\archiveHandler.ts:163:17)\n    at async C:\Users\pragr\githubProjects\OblivionLog\src\userbot\archiveHandler.ts:56:9\n    at async _dispatchUpdate (C:\Users\pragr\githubProjects\OblivionLog\node_modules\telegram\client\updates.js:146:21)"
+    userId: 7996386860
+    error: "Could not create buffer from file C:\\Users\\pragr\\githubProjects\\OblivionLog\\archives_media\\5fb0f3caa4a50b84555210f1.tmp"
