@@ -652,11 +652,39 @@ const verifyChannelExists = async (
   channelId: number
 ): Promise<boolean> => {
   try {
-    await client.invoke(
+    const channelInfo = await client.invoke(
       new Api.channels.GetChannels({
         id: [channelPeer],
       })
     );
+    
+    if (!channelInfo.chats || channelInfo.chats.length === 0) {
+      logger.warn({ channelId }, 'Channel not found in response');
+      return false;
+    }
+    
+    const channel = channelInfo.chats[0];
+    if (!(channel instanceof Api.Channel)) {
+      logger.warn({ channelId }, 'Not a valid channel');
+      return false;
+    }
+    
+    if (channel.left) {
+      logger.warn({ channelId }, 'User has left the channel, rejoining...');
+      
+      try {
+        await client.invoke(
+          new Api.channels.JoinChannel({
+            channel: channelPeer,
+          })
+        );
+        logger.info({ channelId }, 'Successfully rejoined archive channel');
+      } catch (joinError: any) {
+        logger.error({ channelId, error: joinError.message }, 'Failed to rejoin channel');
+        return false;
+      }
+    }
+    
     return true;
   } catch (error: any) {
     const errorMsg = error.message || error.toString();
