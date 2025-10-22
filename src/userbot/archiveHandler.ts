@@ -177,13 +177,28 @@ const handlePrivateMessage = async (
     accessHash: bigInt(channel.channel_access_hash || '0'),
   });
 
-  const channelExists = await verifyChannelExists(client, channelPeer, channel.channel_id);
-  if (!channelExists) {
+  const verifyResult = await verifyChannelExists(client, channelPeer, channel.channel_id);
+  
+  if (verifyResult.newAccessHash) {
+    await UserChannel.findOneAndUpdate(
+      { _id: channel._id },
+      { channel_access_hash: verifyResult.newAccessHash }
+    );
+    
+    channelPeer = new Api.InputPeerChannel({
+      channelId: bigInt(channel.channel_id),
+      accessHash: bigInt(verifyResult.newAccessHash),
+    });
+    
+    logger.info({ myId, otherId, channelId: channel.channel_id }, 'Channel access hash updated in DB');
+  }
+  
+  if (!verifyResult.exists) {
     logger.warn({ 
       myId, 
       otherId, 
       channelId: channel.channel_id 
-    }, 'Archive channel was deleted by user, creating new one');
+    }, 'Archive channel was deleted or inaccessible, creating new one');
     
     await UserChannel.deleteOne({ _id: channel._id });
     
@@ -677,7 +692,7 @@ const verifyChannelExists = async (
   client: TelegramClient,
   channelPeer: Api.InputPeerChannel,
   channelId: number
-): Promise<boolean> => {
+): Promise<{ exists: boolean; newAccessHash?: string }> => {
   try {
     const channelInfo = await client.invoke(
       new Api.channels.GetChannels({
@@ -687,13 +702,13 @@ const verifyChannelExists = async (
     
     if (!channelInfo.chats || channelInfo.chats.length === 0) {
       logger.warn({ channelId }, 'Channel not found in response');
-      return false;
+      return { exists: false };
     }
     
     const channel = channelInfo.chats[0];
     if (!(channel instanceof Api.Channel)) {
       logger.warn({ channelId }, 'Not a valid channel');
-      return false;
+      return { exists: false };
     }
     
     if (channel.left) {
@@ -711,17 +726,77 @@ const verifyChannelExists = async (
       }
     }
     
-    return true;
+    const newAccessHash = channel.accessHash?.toString();
+    if (newAccessHash && newAccessHash !== channelPeer.accessHash.toString()) {
+      logger.info({ channelId, oldHash: channelPeer.accessHash.toString().substring(0, 10), newHash: newAccessHash.substring(0, 10) }, 'Access hash changed, updating DB');
+      return { exists: true, newAccessHash };
+    }
+    
+    return { exists: true };
   } catch (error: any) {
     const errorMsg = error.message || error.toString();
+    
     if (errorMsg.includes('CHANNEL_INVALID') || 
         errorMsg.includes('CHANNEL_PRIVATE') ||
         errorMsg.includes('not found')) {
       logger.info({ channelId }, 'Channel no longer exists or is inaccessible');
-      return false;
+      return { exists: false };
     }
-    logger.warn({ channelId, error: errorMsg }, 'Error checking channel, assuming it exists');
-    return true;
+    
+    if (errorMsg.includes('ACCESS_HASH_INVALID') || 
+        errorMsg.includes('CHANNEL_PARTICIPANT_JOIN_MISSING')) {
+      logger.warn({ channelId, error: errorMsg }, 'Access hash invalid, trying to find channel via dialogs');
+      
+      try {
+        let foundChannel: Api.Channel | null = null;
+        let offset = 0;
+        const limit = 100;
+        const maxIterations = 10;
+        
+        for (let i = 0; i < maxIterations; i++) {
+          const dialogs = await client.getDialogs({ limit, offsetDate: offset });
+          
+          if (!dialogs || dialogs.length === 0) {
+            break;
+          }
+          
+          for (const dialog of dialogs) {
+            if (dialog.entity instanceof Api.Channel && 
+                Number(dialog.entity.id) === channelId) {
+              foundChannel = dialog.entity;
+              break;
+            }
+          }
+          
+          if (foundChannel) {
+            break;
+          }
+          
+          offset = dialogs.length;
+          
+          if (dialogs.length < limit) {
+            break;
+          }
+        }
+        
+        if (foundChannel) {
+          const newAccessHash = foundChannel.accessHash?.toString();
+          if (newAccessHash) {
+            logger.info({ channelId, newHash: newAccessHash.substring(0, 10) }, 'Found channel via dialogs, access hash updated');
+            return { exists: true, newAccessHash };
+          }
+        }
+        
+        logger.warn({ channelId }, 'Channel not found in dialogs (searched up to 1000 chats)');
+        return { exists: false };
+      } catch (dialogError: any) {
+        logger.error({ channelId, error: dialogError.message }, 'Failed to search dialogs');
+        return { exists: false };
+      }
+    }
+    
+    logger.warn({ channelId, error: errorMsg }, 'Unknown error checking channel, assuming deleted');
+    return { exists: false };
   }
 };
 
