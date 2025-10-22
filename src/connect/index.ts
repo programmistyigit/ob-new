@@ -171,16 +171,25 @@ export const startLoginProcess = async (
           await bot.telegram.sendMessage(userId, successMessage);
         }
       } else {
+        const hasActiveSubscription = user?.expiresAt && new Date(user.expiresAt) > new Date();
+        
         await BotUser.findOneAndUpdate(
           { userId },
           {
             action: 'done',
             pendingShareActivation: false,
+            status: hasActiveSubscription ? 'active' : 'disabled',
             ...(userPhone && { phoneNumber: userPhone }),
             ...(userUsername && { username: userUsername }),
             ...(userFirstName && { firstName: userFirstName }),
           }
         );
+        
+        logger.info({ 
+          userId, 
+          hasActiveSubscription, 
+          expiresAt: user?.expiresAt 
+        }, 'Login completed - status updated based on subscription');
       }
 
       logger.info({ userId }, 'Login successful');

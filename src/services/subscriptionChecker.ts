@@ -9,10 +9,13 @@ export const checkExpiredSubscriptions = async (): Promise<void> => {
     
     const expiredUsers = await BotUser.find({
       status: 'active',
-      expiresAt: { $lte: now }
+      expiresAt: { $exists: true, $ne: null, $lte: now }
     });
 
-    logger.info({ count: expiredUsers.length }, 'Checking for expired subscriptions');
+    logger.info({ 
+      count: expiredUsers.length,
+      checkedAt: now.toISOString() 
+    }, 'Checking for expired subscriptions');
 
     if (expiredUsers.length === 0) {
       return;
@@ -23,14 +26,14 @@ export const checkExpiredSubscriptions = async (): Promise<void> => {
         logger.warn({ 
           userId: user.userId, 
           expiresAt: user.expiresAt,
-          pay: user.pay 
+          pay: user.pay,
+          action: user.action 
         }, 'Subscription expired - disabling services only (userbot stays connected)');
 
         await BotUser.findOneAndUpdate(
           { userId: user.userId },
           {
-            status: 'disabled',
-            action: 'guest'
+            status: 'disabled'
           }
         );
 

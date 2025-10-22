@@ -16,6 +16,7 @@ import fs from 'fs';
 const logger = createLogger('ArchiveHandler');
 
 const channelCache = new Map<string, number>();
+const channelCreationLocks = new Map<string, Promise<any>>();
 
 export const setupArchiveHandler = (client: TelegramClient, userId: number) => {
   logger.info({ userId }, 'Archive handler setup started');
@@ -127,16 +128,42 @@ const handlePrivateMessage = async (
   let channel = await UserChannel.findOne({ my_user_id: myId, user_id: otherId });
   
   if (!channel) {
-    try {
-      channel = await createArchiveChannel(client, myId, otherUser);
-    } catch (error: any) {
-      logger.error({ 
-        myId, 
-        otherId, 
-        error: error.message || error.toString(),
-        stack: error.stack 
-      }, 'Failed to create archive channel');
-      return;
+    const lockKey = `${myId}_${otherId}`;
+    
+    if (channelCreationLocks.has(lockKey)) {
+      logger.info({ myId, otherId }, 'Channel creation in progress, waiting...');
+      await channelCreationLocks.get(lockKey);
+      channel = await UserChannel.findOne({ my_user_id: myId, user_id: otherId });
+      
+      if (!channel) {
+        logger.error({ myId, otherId }, 'Channel still null after lock wait');
+        return;
+      }
+    } else {
+      const creationPromise = (async () => {
+        try {
+          const newChannel = await createArchiveChannel(client, myId, otherUser);
+          return newChannel;
+        } catch (error: any) {
+          logger.error({ 
+            myId, 
+            otherId, 
+            error: error.message || error.toString(),
+            stack: error.stack 
+          }, 'Failed to create archive channel');
+          throw error;
+        } finally {
+          channelCreationLocks.delete(lockKey);
+        }
+      })();
+      
+      channelCreationLocks.set(lockKey, creationPromise);
+      
+      try {
+        channel = await creationPromise;
+      } catch (error) {
+        return;
+      }
     }
   }
 
@@ -680,8 +707,7 @@ const verifyChannelExists = async (
         );
         logger.info({ channelId }, 'Successfully rejoined archive channel');
       } catch (joinError: any) {
-        logger.error({ channelId, error: joinError.message }, 'Failed to rejoin channel');
-        return false;
+        logger.warn({ channelId, error: joinError.message }, 'Failed to rejoin channel, but channel exists');
       }
     }
     
