@@ -15,6 +15,19 @@ export const handleConnectChild = async (ctx: Context) => {
     if (!user) return;
 
     const lang = user.settings.language || 'uz';
+    
+    if (user.sessionStatus === 'revoked') {
+      const message = lang === 'uz'
+        ? '⚠️ Seansiz o\'chirilgan!\n\nIltimos qayta ulanish uchun:\n/connect'
+        : lang === 'en'
+        ? '⚠️ Your session is revoked!\n\nPlease reconnect:\n/connect'
+        : '⚠️ Ваш сеанс отозван!\n\nПожалуйста переподключитесь:\n/connect';
+      
+      await ctx.editMessageText(message);
+      await ctx.answerCbQuery();
+      logger.info({ userId }, 'Connect child access denied - session revoked');
+      return;
+    }
 
     await BotUser.findOneAndUpdate(
       { userId },
@@ -40,6 +53,19 @@ export const handleMyChildren = async (ctx: Context) => {
     if (!user) return;
 
     const lang = user.settings.language || 'uz';
+    
+    if (user.sessionStatus === 'revoked') {
+      const message = lang === 'uz'
+        ? '⚠️ Seansiz o\'chirilgan!\n\nIltimos qayta ulanish uchun:\n/connect'
+        : lang === 'en'
+        ? '⚠️ Your session is revoked!\n\nPlease reconnect:\n/connect'
+        : '⚠️ Ваш сеанс отозван!\n\nПожалуйста переподключитесь:\n/connect';
+      
+      await ctx.answerCbQuery(message, { show_alert: true });
+      logger.info({ userId }, 'My children access denied - session revoked');
+      return;
+    }
+    
     const childConnections = user.childConnections || [];
     
     const relevantChildren = childConnections.filter(

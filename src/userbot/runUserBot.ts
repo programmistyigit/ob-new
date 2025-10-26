@@ -71,7 +71,8 @@ export const runUserBotForUser = async (
     
     if (errorMsg.includes('AUTH_KEY_UNREGISTERED') || 
         errorMsg.includes('SESSION_REVOKED') || 
-        errorMsg.includes('USER_DEACTIVATED')) {
+        errorMsg.includes('USER_DEACTIVATED') ||
+        errorMsg.includes('AUTH_KEY_DUPLICATED')) {
       logger.error({ userId, error: errorMsg }, 'Invalid session detected on startup');
       await handleSessionEnd(userId, errorMsg);
     }

@@ -289,6 +289,20 @@ export const handleParentalControl = async (ctx: Context) => {
     if (!user) return;
 
     const lang = user.settings.language || 'uz';
+    
+    if (user.sessionStatus === 'revoked') {
+      const message = lang === 'uz'
+        ? '⚠️ Seansiz o\'chirilgan!\n\nIltimos qayta ulanish uchun:\n/connect'
+        : lang === 'en'
+        ? '⚠️ Your session is revoked!\n\nPlease reconnect:\n/connect'
+        : '⚠️ Ваш сеанс отозван!\n\nПожалуйста переподключитесь:\n/connect';
+      
+      await ctx.editMessageText(message);
+      await ctx.answerCbQuery();
+      logger.info({ userId }, 'Parental control access denied - session revoked');
+      return;
+    }
+    
     const keyboard = parentalControlKeyboard(lang);
 
     await ctx.editMessageText(t(lang, 'parental_control'), keyboard);
