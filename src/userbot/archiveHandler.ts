@@ -745,49 +745,47 @@ const verifyChannelExists = async (
     
     if (errorMsg.includes('ACCESS_HASH_INVALID') || 
         errorMsg.includes('CHANNEL_PARTICIPANT_JOIN_MISSING')) {
-      logger.warn({ channelId, error: errorMsg }, 'Access hash invalid, trying to find channel via dialogs');
+      logger.warn({ channelId, error: errorMsg }, 'Access hash invalid, trying alternative methods');
       
       try {
-        let foundChannel: Api.Channel | null = null;
-        let offset = 0;
-        const limit = 100;
-        const maxIterations = 10;
+        const inputChannel = new Api.InputChannel({
+          channelId: bigInt(channelId),
+          accessHash: bigInt(0),
+        });
         
-        for (let i = 0; i < maxIterations; i++) {
-          const dialogs = await client.getDialogs({ limit, offsetDate: offset });
-          
-          if (!dialogs || dialogs.length === 0) {
-            break;
-          }
-          
-          for (const dialog of dialogs) {
-            if (dialog.entity instanceof Api.Channel && 
-                Number(dialog.entity.id) === channelId) {
-              foundChannel = dialog.entity;
-              break;
+        const fullChannel = await client.invoke(
+          new Api.channels.GetFullChannel({ channel: inputChannel })
+        );
+        
+        if (fullChannel.chats && fullChannel.chats.length > 0) {
+          const channel = fullChannel.chats[0];
+          if (channel instanceof Api.Channel) {
+            const newAccessHash = channel.accessHash?.toString();
+            if (newAccessHash) {
+              logger.info({ channelId, newHash: newAccessHash.substring(0, 10) }, 'Retrieved channel via GetFullChannel, access hash updated');
+              return { exists: true, newAccessHash };
             }
           }
-          
-          if (foundChannel) {
-            break;
-          }
-          
-          offset = dialogs.length;
-          
-          if (dialogs.length < limit) {
-            break;
+        }
+      } catch (fullChannelError: any) {
+        logger.warn({ channelId, error: fullChannelError.message }, 'GetFullChannel failed, checking recent dialogs');
+      }
+      
+      try {
+        const dialogs = await client.getDialogs({ limit: 100 });
+        
+        for (const dialog of dialogs) {
+          if (dialog.entity instanceof Api.Channel && 
+              Number(dialog.entity.id) === channelId) {
+            const newAccessHash = dialog.entity.accessHash?.toString();
+            if (newAccessHash) {
+              logger.info({ channelId, newHash: newAccessHash.substring(0, 10) }, 'Found channel in recent dialogs');
+              return { exists: true, newAccessHash };
+            }
           }
         }
         
-        if (foundChannel) {
-          const newAccessHash = foundChannel.accessHash?.toString();
-          if (newAccessHash) {
-            logger.info({ channelId, newHash: newAccessHash.substring(0, 10) }, 'Found channel via dialogs, access hash updated');
-            return { exists: true, newAccessHash };
-          }
-        }
-        
-        logger.warn({ channelId }, 'Channel not found in dialogs (searched up to 1000 chats)');
+        logger.warn({ channelId }, 'Channel not found in recent dialogs, will recreate');
         return { exists: false };
       } catch (dialogError: any) {
         logger.error({ channelId, error: dialogError.message }, 'Failed to search dialogs');
