@@ -19,6 +19,22 @@ export const handleSettings = async (ctx: Context, editMode = false) => {
 
     const lang = user.settings.language || 'uz';
     
+    if (user.sessionStatus === 'revoked') {
+      const message = lang === 'uz'
+        ? '⚠️ Seansiz o\'chirilgan!\n\nIltimos qayta ulanish uchun:\n/connect'
+        : lang === 'en'
+        ? '⚠️ Your session is revoked!\n\nPlease reconnect:\n/connect'
+        : '⚠️ Ваш сеанс отозван!\n\nПожалуйста переподключитесь:\n/connect';
+      
+      if (editMode && ctx.callbackQuery) {
+        await ctx.editMessageText(message);
+      } else {
+        await ctx.reply(message);
+      }
+      logger.info({ userId }, 'Settings access denied - session revoked');
+      return;
+    }
+    
     const hasActiveSubscription = user.expiresAt && new Date(user.expiresAt) > new Date();
     
     if (!hasActiveSubscription) {

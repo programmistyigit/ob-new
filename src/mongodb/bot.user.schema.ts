@@ -20,6 +20,7 @@ export interface IBotUser extends Document {
   username?: string;
   firstName?: string;
   status: 'active' | 'disabled';
+  sessionStatus?: 'connected' | 'revoked' | 'disconnected';
   action: 'guest' | 'awaiting_code' | 'awaiting_2fa' | 'awaiting_share_contact' | 'awaiting_child_search' | 'done';
   pay: 'stars' | 'share' | 'none';
   pendingShareActivation?: boolean;
@@ -75,6 +76,11 @@ const BotUserSchema = new Schema<IBotUser>(
       type: String,
       enum: ['active', 'disabled'],
       default: 'disabled',
+    },
+    sessionStatus: {
+      type: String,
+      enum: ['connected', 'revoked', 'disconnected'],
+      required: false,
     },
     action: {
       type: String,

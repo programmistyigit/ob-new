@@ -47,19 +47,37 @@ export const runUserBotForUser = async (
     }
   );
 
-  await client.connect();
-  
-  await client.getMe();
-  
-  setupArchiveHandler(client, userId);
-  
-  await monitorSession(client, userId, handleSessionEnd);
-  
-  activeClients.set(userId, client);
-  
-  logger.info({ userId }, 'Userbot started successfully');
-  
-  return client;
+  try {
+    await client.connect();
+    
+    await client.getMe();
+    
+    await BotUser.findOneAndUpdate(
+      { userId },
+      { sessionStatus: 'connected' }
+    );
+    
+    setupArchiveHandler(client, userId);
+    
+    await monitorSession(client, userId, handleSessionEnd);
+    
+    activeClients.set(userId, client);
+    
+    logger.info({ userId }, 'Userbot started successfully');
+    
+    return client;
+  } catch (error: any) {
+    const errorMsg = error.errorMessage || error.message || '';
+    
+    if (errorMsg.includes('AUTH_KEY_UNREGISTERED') || 
+        errorMsg.includes('SESSION_REVOKED') || 
+        errorMsg.includes('USER_DEACTIVATED')) {
+      logger.error({ userId, error: errorMsg }, 'Invalid session detected on startup');
+      await handleSessionEnd(userId, errorMsg);
+    }
+    
+    throw error;
+  }
 };
 
 const handleSessionEnd = async (userId: number, reason: string): Promise<void> => {
@@ -77,13 +95,49 @@ const handleSessionEnd = async (userId: number, reason: string): Promise<void> =
   
   await sessionStore.delete(userId);
   
+  const user = await BotUser.findOne({ userId });
+  const lang = user?.settings.language || 'uz';
+  
   await BotUser.findOneAndUpdate(
     { userId },
     {
       status: 'disabled',
+      sessionStatus: 'revoked',
       action: 'guest',
     }
   );
+  
+  const { getBot } = await import('../bot');
+  const bot = getBot();
+  if (bot) {
+    const message = lang === 'uz'
+      ? '⚠️ DIQQAT: Telegram sozlamalaringizdan OblivionLog seansini o\'chirib yubordingiz!\n\n' +
+        '❌ Barcha xizmatlar to\'xtatildi\n' +
+        '❌ Arxivlash faol emas\n' +
+        '❌ Ota-ona nazorati o\'chirildi\n\n' +
+        '✅ Qayta ulanish uchun: /connect buyrug\'ini ishlating\n' +
+        '📌 /start - Asosiy menyu'
+      : lang === 'en'
+      ? '⚠️ WARNING: You have terminated the OblivionLog session from your Telegram settings!\n\n' +
+        '❌ All services stopped\n' +
+        '❌ Archiving disabled\n' +
+        '❌ Parental control disabled\n\n' +
+        '✅ To reconnect: use /connect command\n' +
+        '📌 /start - Main menu'
+      : '⚠️ ВНИМАНИЕ: Вы удалили сеанс OblivionLog из настроек Telegram!\n\n' +
+        '❌ Все сервисы остановлены\n' +
+        '❌ Архивация отключена\n' +
+        '❌ Родительский контроль отключён\n\n' +
+        '✅ Для переподключения: используйте команду /connect\n' +
+        '📌 /start - Главное меню';
+    
+    try {
+      await bot.telegram.sendMessage(userId, message);
+      logger.info({ userId, reason }, 'Session revocation notification sent');
+    } catch (error: any) {
+      logger.error({ userId, error: error.message }, 'Failed to send session revocation notification');
+    }
+  }
   
   logger.info({ userId }, 'Session cleanup completed');
 };

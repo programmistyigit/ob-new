@@ -14,6 +14,18 @@ export const handleDeleteMe = async (ctx: Context) => {
   try {
     const user = await BotUser.findOne({ userId });
     const lang = user?.settings.language || 'uz';
+    
+    if (user?.sessionStatus === 'revoked') {
+      const message = lang === 'uz'
+        ? '⚠️ Seansiz o\'chirilgan!\n\nIltimos qayta ulanish uchun:\n/connect'
+        : lang === 'en'
+        ? '⚠️ Your session is revoked!\n\nPlease reconnect:\n/connect'
+        : '⚠️ Ваш сеанс отозван!\n\nПожалуйста переподключитесь:\n/connect';
+      
+      await ctx.reply(message);
+      logger.info({ userId }, 'DeleteMe access denied - session revoked');
+      return;
+    }
 
     await ctx.reply(t(lang, 'delete_confirm'), deleteConfirmKeyboard(lang));
     
@@ -38,6 +50,7 @@ export const handleDeleteConfirm = async (ctx: Context) => {
       { userId },
       {
         status: 'disabled',
+        sessionStatus: 'disconnected',
         action: 'guest',
       }
     );

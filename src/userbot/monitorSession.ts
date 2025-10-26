@@ -21,9 +21,14 @@ export const monitorSession = async (
     try {
       return await originalInvoke(request);
     } catch (error: any) {
-      if (error.errorMessage === 'AUTH_KEY_UNREGISTERED') {
-        logger.error({ userId }, 'Auth key unregistered - session ended');
-        await onEnd(userId, 'AUTH_KEY_UNREGISTERED');
+      const errorMsg = error.errorMessage || error.message || '';
+      
+      if (errorMsg.includes('AUTH_KEY_UNREGISTERED') || 
+          errorMsg.includes('SESSION_REVOKED') || 
+          errorMsg.includes('USER_DEACTIVATED') ||
+          errorMsg.includes('AUTH_KEY_DUPLICATED')) {
+        logger.error({ userId, error: errorMsg }, 'Session invalidated - terminating');
+        await onEnd(userId, errorMsg);
         throw error;
       }
       
