@@ -73,9 +73,18 @@ export const settingsKeyboard = (
     ? (savedMessage ? '✅ Archive: on' : '❌ Archive: off')
     : (savedMessage ? '✅ Архивация: вкл' : '❌ Архивация: выкл');
 
+  const groupArchiveText = lang === 'uz'
+    ? '📂 Guruh arxivi'
+    : lang === 'en'
+    ? '📂 Group archive'
+    : '📂 Архив групп';
+
   const buttons = [
     [
       Markup.button.callback(archiveText, 'toggle_saved'),
+    ],
+    [
+      Markup.button.callback(groupArchiveText, 'group_archive'),
     ],
     [
       Markup.button.callback(pcText, 'parental_control'),
@@ -182,5 +191,82 @@ export const savedMessageSubmenuKeyboard = (
     [Markup.button.callback(text.media, 'toggle_media')],
     [Markup.button.callback(text.disable, 'disable_archive')],
     [Markup.button.callback(text.back, 'settings_back')],
+  ]);
+};
+
+export const groupArchiveKeyboard = (
+  groups: Array<{ chatId: number; title: string; archiveMedia: boolean; archiveMessages: boolean }>,
+  lang: 'uz' | 'en' | 'ru' = 'uz'
+) => {
+  const translations = {
+    uz: {
+      add: '➕ Guruh qo\'shish',
+      back: '⬅️ Orqaga',
+      noGroups: 'Hali guruhlar qo\'shilmagan'
+    },
+    en: {
+      add: '➕ Add Group',
+      back: '⬅️ Back',
+      noGroups: 'No groups added yet'
+    },
+    ru: {
+      add: '➕ Добавить группу',
+      back: '⬅️ Назад',
+      noGroups: 'Группы ещё не добавлены'
+    }
+  };
+
+  const text = translations[lang];
+
+  const buttons = [];
+
+  buttons.push([Markup.button.callback(text.add, 'ga_add_group')]);
+
+  groups.forEach(group => {
+    const mediaIcon = group.archiveMedia ? '✅' : '❌';
+    const messageIcon = group.archiveMessages ? '✅' : '❌';
+    const groupText = `${group.title} [${messageIcon}/${mediaIcon}]`;
+    buttons.push([Markup.button.callback(groupText, `ga_group_${group.chatId}`)]);
+  });
+
+  buttons.push([Markup.button.callback(text.back, 'settings_back')]);
+
+  return Markup.inlineKeyboard(buttons);
+};
+
+export const groupManageKeyboard = (
+  chatId: number,
+  archiveMedia: boolean,
+  archiveMessages: boolean,
+  lang: 'uz' | 'en' | 'ru' = 'uz'
+) => {
+  const translations = {
+    uz: {
+      messages: archiveMessages ? '✅ Xabarlar: yoqilgan' : '❌ Xabarlar: o\'chirilgan',
+      media: archiveMedia ? '✅ Media: yoqilgan' : '❌ Media: o\'chirilgan',
+      remove: '🗑 O\'chirish',
+      back: '⬅️ Orqaga'
+    },
+    en: {
+      messages: archiveMessages ? '✅ Messages: on' : '❌ Messages: off',
+      media: archiveMedia ? '✅ Media: on' : '❌ Media: off',
+      remove: '🗑 Remove',
+      back: '⬅️ Back'
+    },
+    ru: {
+      messages: archiveMessages ? '✅ Сообщения: вкл' : '❌ Сообщения: выкл',
+      media: archiveMedia ? '✅ Медиа: вкл' : '❌ Медиа: выкл',
+      remove: '🗑 Удалить',
+      back: '⬅️ Назад'
+    }
+  };
+
+  const text = translations[lang];
+
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(text.messages, `ga_toggle_msg_${chatId}`)],
+    [Markup.button.callback(text.media, `ga_toggle_media_${chatId}`)],
+    [Markup.button.callback(text.remove, `ga_remove_${chatId}`)],
+    [Markup.button.callback(text.back, 'group_archive')],
   ]);
 };

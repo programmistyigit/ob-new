@@ -2,6 +2,7 @@ import { Telegraf } from 'telegraf';
 import { env } from '../config/env';
 import { createLogger } from '../utils/logger';
 import { handleStart, handleConnect, handleContact, handleSettings, handleToggleSaved, handleDeleteMe, handleDeleteConfirm, handleDeleteCancel, handleToggleMessage, handleToggleMedia, handleDisableArchive, handleSettingsBack, handleParentalControl, handleConnectChild, handleMyChildren, sendApprovalRequest, handleApproval, viewParentConnections, viewParentDetail, disconnectFromParent, disconnectFromChild, viewChildDetail, reconnectChild, reconnectParent, deleteChild, deleteParent, handleReconnectApproval } from './handlers';
+import { handleGroupArchive, handleAddGroup, handleSelectGroup, handleGroupManage, handleToggleGroupMessages, handleToggleGroupMedia, handleRemoveGroup } from './handlers/groupArchive';
 import { createStarsInvoice, handleSuccessfulPayment, handlePreCheckoutQuery, createMonitoringInvoice, handleMonitoringPayment } from './payments';
 import { handleCodeCallback } from './controllers/codeInput';
 import { handleTextInput } from './controllers/textInput';
@@ -93,6 +94,44 @@ export const createBot = (): Telegraf => {
   bot.action('parental_control', handleParentalControl);
   bot.action('pc_connect_child', handleConnectChild);
   bot.action('pc_my_children', handleMyChildren);
+  
+  bot.action('group_archive', handleGroupArchive);
+  bot.action('ga_add_group', handleAddGroup);
+  
+  bot.action(/^ga_select_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleSelectGroup(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^ga_group_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleGroupManage(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^ga_toggle_msg_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleToggleGroupMessages(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^ga_toggle_media_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleToggleGroupMedia(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^ga_remove_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleRemoveGroup(ctx, match[1]);
+    }
+  });
   
   bot.action(/^pc_send_request_(\d+)$/, async (ctx) => {
     const match = ctx.match;

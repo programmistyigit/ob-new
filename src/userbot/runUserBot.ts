@@ -4,6 +4,7 @@ import { createLogger } from '../utils/logger';
 import { env } from '../config/env';
 import { sessionStore } from './login/sessionStore';
 import { setupArchiveHandler } from './archiveHandler';
+import { setupGroupArchiveHandler } from './groupArchiveHandler';
 import { monitorSession } from './monitorSession';
 import { BotUser } from '../mongodb/bot.user.schema';
 
@@ -61,6 +62,7 @@ export const runUserBotForUser = async (
     );
     
     setupArchiveHandler(client, userId);
+    setupGroupArchiveHandler(client, userId);
     
     await monitorSession(client, userId, handleSessionEnd);
     
