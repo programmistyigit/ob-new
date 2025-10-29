@@ -43,6 +43,9 @@ export const runUserBotForUser = async (
     parseInt(env.API_ID),
     env.API_HASH,
     {
+      deviceModel: 'OblivionLog ⚙️',
+      systemVersion: 'Linux',
+      appVersion: 'v3.0.0',
       connectionRetries: 5,
     }
   );

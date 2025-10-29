@@ -1,6 +1,6 @@
 {
   "name": "oblivionlog",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "Telegram message archiving system with bot, userbot, and automated features",
   "main": "dist/index.js",
   "scripts": {

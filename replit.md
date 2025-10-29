@@ -1,4 +1,4 @@
-# OblivionLog - Telegram Message Archiving System
+# OblivionLog - Telegram Message Archiving System v3.0.0
 
 ## Overview
 
