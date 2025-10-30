@@ -100,28 +100,44 @@ const handlePrivateMessage = async (
     logger.debug({ myId }, 'Could not fetch my name');
   }
 
-  const savedMessageEnabled = typeof user.settings.savedMessage === 'boolean'
-    ? user.settings.savedMessage
-    : user.settings.savedMessage?.enabled || false;
+  const perChatSettings = user.privateArchive?.find(c => c.chatId === otherId);
+  
+  let shouldArchiveMessage: boolean;
+  let shouldArchiveMedia: boolean;
+  
+  if (perChatSettings) {
+    const hasText = message.text && message.text.length > 0;
+    const hasMedia = !!message.media;
+    shouldArchiveMessage = perChatSettings.archiveMessages && hasText;
+    shouldArchiveMedia = perChatSettings.archiveMedia && hasMedia;
+    
+    logger.debug({ myId, otherId, perChat: true }, 'Using per-chat archive settings');
+  } else {
+    const savedMessageEnabled = typeof user.settings.savedMessage === 'boolean'
+      ? user.settings.savedMessage
+      : user.settings.savedMessage?.enabled || false;
 
-  if (!savedMessageEnabled) {
-    logger.debug({ myId }, 'Saved message disabled, skipping archive');
-    return;
+    if (!savedMessageEnabled) {
+      logger.debug({ myId }, 'Saved message disabled, skipping archive');
+      return;
+    }
+
+    const hasText = message.text && message.text.length > 0;
+    const hasMedia = !!message.media;
+
+    shouldArchiveMessage = typeof user.settings.savedMessage === 'boolean'
+      ? hasText
+      : (user.settings.savedMessage?.message && hasText) || false;
+
+    shouldArchiveMedia = typeof user.settings.savedMessage === 'boolean'
+      ? hasMedia
+      : (user.settings.savedMessage?.media && hasMedia) || false;
+      
+    logger.debug({ myId, otherId, perChat: false }, 'Using global archive settings');
   }
 
-  const hasText = message.text && message.text.length > 0;
-  const hasMedia = !!message.media;
-
-  const shouldArchiveMessage = typeof user.settings.savedMessage === 'boolean'
-    ? hasText
-    : (user.settings.savedMessage?.message && hasText) || false;
-
-  const shouldArchiveMedia = typeof user.settings.savedMessage === 'boolean'
-    ? hasMedia
-    : (user.settings.savedMessage?.media && hasMedia) || false;
-
   if (!shouldArchiveMessage && !shouldArchiveMedia) {
-    logger.debug({ myId, hasText, hasMedia }, 'Nothing to archive based on settings');
+    logger.debug({ myId, hasText: !!message.text, hasMedia: !!message.media }, 'Nothing to archive based on settings');
     return;
   }
 

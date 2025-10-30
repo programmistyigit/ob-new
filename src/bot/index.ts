@@ -3,6 +3,7 @@ import { env } from '../config/env';
 import { createLogger } from '../utils/logger';
 import { handleStart, handleConnect, handleContact, handleSettings, handleToggleSaved, handleDeleteMe, handleDeleteConfirm, handleDeleteCancel, handleToggleMessage, handleToggleMedia, handleDisableArchive, handleSettingsBack, handleParentalControl, handleConnectChild, handleMyChildren, sendApprovalRequest, handleApproval, viewParentConnections, viewParentDetail, disconnectFromParent, disconnectFromChild, viewChildDetail, reconnectChild, reconnectParent, deleteChild, deleteParent, handleReconnectApproval } from './handlers';
 import { handleGroupArchive, handleAddGroup, handleSelectGroup, handleGroupManage, handleToggleGroupMessages, handleToggleGroupMedia, handleRemoveGroup } from './handlers/groupArchive';
+import { handlePrivateArchive, handleAddPrivateChat, handleSelectPrivateChat, handlePrivateChatManage, handleTogglePrivateMessages, handleTogglePrivateMedia, handleRemovePrivateChat } from './handlers/privateArchive';
 import { createStarsInvoice, handleSuccessfulPayment, handlePreCheckoutQuery, createMonitoringInvoice, handleMonitoringPayment } from './payments';
 import { handleCodeCallback } from './controllers/codeInput';
 import { handleTextInput } from './controllers/textInput';
@@ -130,6 +131,44 @@ export const createBot = (): Telegraf => {
     const match = ctx.match;
     if (match && match[1]) {
       await handleRemoveGroup(ctx, match[1]);
+    }
+  });
+  
+  bot.action('private_archive', handlePrivateArchive);
+  bot.action('pa_add_chat', handleAddPrivateChat);
+  
+  bot.action(/^pa_select_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleSelectPrivateChat(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^pa_chat_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handlePrivateChatManage(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^pa_toggle_msg_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleTogglePrivateMessages(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^pa_toggle_media_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleTogglePrivateMedia(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^pa_remove_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleRemovePrivateChat(ctx, match[1]);
     }
   });
   

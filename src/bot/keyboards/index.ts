@@ -79,9 +79,18 @@ export const settingsKeyboard = (
     ? '📂 Group archive'
     : '📂 Архив групп';
 
+  const privateArchiveText = lang === 'uz'
+    ? '💬 Shaxsiy arxiv'
+    : lang === 'en'
+    ? '💬 Private archive'
+    : '💬 Личный архив';
+
   const buttons = [
     [
       Markup.button.callback(archiveText, 'toggle_saved'),
+    ],
+    [
+      Markup.button.callback(privateArchiveText, 'private_archive'),
     ],
     [
       Markup.button.callback(groupArchiveText, 'group_archive'),
@@ -268,5 +277,82 @@ export const groupManageKeyboard = (
     [Markup.button.callback(text.media, `ga_toggle_media_${chatId}`)],
     [Markup.button.callback(text.remove, `ga_remove_${chatId}`)],
     [Markup.button.callback(text.back, 'group_archive')],
+  ]);
+};
+
+export const privateArchiveKeyboard = (
+  chats: Array<{ chatId: number; title: string; archiveMedia: boolean; archiveMessages: boolean }>,
+  lang: 'uz' | 'en' | 'ru' = 'uz'
+) => {
+  const translations = {
+    uz: {
+      add: '➕ Chat qo\'shish',
+      back: '⬅️ Orqaga',
+      noChats: 'Hali chatlar qo\'shilmagan'
+    },
+    en: {
+      add: '➕ Add Chat',
+      back: '⬅️ Back',
+      noChats: 'No chats added yet'
+    },
+    ru: {
+      add: '➕ Добавить чат',
+      back: '⬅️ Назад',
+      noChats: 'Чаты ещё не добавлены'
+    }
+  };
+
+  const text = translations[lang];
+
+  const buttons = [];
+
+  buttons.push([Markup.button.callback(text.add, 'pa_add_chat')]);
+
+  chats.forEach(chat => {
+    const mediaIcon = chat.archiveMedia ? '✅' : '❌';
+    const messageIcon = chat.archiveMessages ? '✅' : '❌';
+    const chatText = `${chat.title} [${messageIcon}/${mediaIcon}]`;
+    buttons.push([Markup.button.callback(chatText, `pa_chat_${chat.chatId}`)]);
+  });
+
+  buttons.push([Markup.button.callback(text.back, 'settings_back')]);
+
+  return Markup.inlineKeyboard(buttons);
+};
+
+export const privateManageKeyboard = (
+  chatId: number,
+  archiveMedia: boolean,
+  archiveMessages: boolean,
+  lang: 'uz' | 'en' | 'ru' = 'uz'
+) => {
+  const translations = {
+    uz: {
+      messages: archiveMessages ? '✅ Xabarlar: yoqilgan' : '❌ Xabarlar: o\'chirilgan',
+      media: archiveMedia ? '✅ Media: yoqilgan' : '❌ Media: o\'chirilgan',
+      remove: '🗑 O\'chirish',
+      back: '⬅️ Orqaga'
+    },
+    en: {
+      messages: archiveMessages ? '✅ Messages: on' : '❌ Messages: off',
+      media: archiveMedia ? '✅ Media: on' : '❌ Media: off',
+      remove: '🗑 Remove',
+      back: '⬅️ Back'
+    },
+    ru: {
+      messages: archiveMessages ? '✅ Сообщения: вкл' : '❌ Сообщения: выкл',
+      media: archiveMedia ? '✅ Медиа: вкл' : '❌ Медиа: выкл',
+      remove: '🗑 Удалить',
+      back: '⬅️ Назад'
+    }
+  };
+
+  const text = translations[lang];
+
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(text.messages, `pa_toggle_msg_${chatId}`)],
+    [Markup.button.callback(text.media, `pa_toggle_media_${chatId}`)],
+    [Markup.button.callback(text.remove, `pa_remove_${chatId}`)],
+    [Markup.button.callback(text.back, 'private_archive')],
   ]);
 };
