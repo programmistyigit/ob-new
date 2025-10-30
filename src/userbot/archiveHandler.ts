@@ -113,22 +113,22 @@ const handlePrivateMessage = async (
   
   let shouldArchiveMessage: boolean;
   let shouldArchiveMedia: boolean;
-  const hasText = message.text && message.text.length > 0;
+  const hasText = !!(message.text && message.text.length > 0);
   const hasMedia = !!message.media;
   
   if (perChatSettings) {
-    shouldArchiveMessage = perChatSettings.archiveMessages && hasText;
-    shouldArchiveMedia = perChatSettings.archiveMedia && hasMedia;
+    shouldArchiveMessage = Boolean(perChatSettings.archiveMessages) && hasText;
+    shouldArchiveMedia = Boolean(perChatSettings.archiveMedia) && hasMedia;
     
     logger.debug({ myId, otherId, override: true, archiveMsg: perChatSettings.archiveMessages, archiveMedia: perChatSettings.archiveMedia }, 'Using per-chat override settings');
   } else {
     shouldArchiveMessage = typeof user.settings.savedMessage === 'boolean'
       ? hasText
-      : (user.settings.savedMessage?.message && hasText) || false;
+      : Boolean(user.settings.savedMessage?.message) && hasText;
 
     shouldArchiveMedia = typeof user.settings.savedMessage === 'boolean'
       ? hasMedia
-      : (user.settings.savedMessage?.media && hasMedia) || false;
+      : Boolean(user.settings.savedMessage?.media) && hasMedia;
       
     logger.debug({ myId, otherId, override: false }, 'Using default global settings');
   }
