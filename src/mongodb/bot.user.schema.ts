@@ -23,6 +23,15 @@ export interface IGroupArchive {
   addedAt: Date;
 }
 
+export interface IPrivateArchive {
+  chatId: number;
+  title: string;
+  archiveMedia: boolean;
+  archiveMessages: boolean;
+  channelId?: number;
+  addedAt: Date;
+}
+
 export interface IBotUser extends Document {
   userId: number;
   phoneNumber?: string;
@@ -41,6 +50,7 @@ export interface IBotUser extends Document {
   parentConnections?: IParentConnection[];
   childConnections?: IChildConnection[];
   groupArchive?: IGroupArchive[];
+  privateArchive?: IPrivateArchive[];
   settings: {
     savedMessage?: {
       enabled: boolean;
@@ -157,6 +167,19 @@ const BotUserSchema = new Schema<IBotUser>(
       default: [],
     },
     groupArchive: {
+      type: [
+        {
+          chatId: { type: Number, required: true },
+          title: { type: String, required: true },
+          archiveMedia: { type: Boolean, default: true },
+          archiveMessages: { type: Boolean, default: true },
+          channelId: { type: Number, required: false },
+          addedAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
+    privateArchive: {
       type: [
         {
           chatId: { type: Number, required: true },
