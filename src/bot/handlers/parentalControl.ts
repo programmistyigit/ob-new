@@ -389,48 +389,15 @@ export const handleApproval = async (ctx: Context, parentId: number, approved: b
 
     const status = approved ? 'approved' : 'rejected';
 
-    if (approved) {
-      const now = new Date();
-      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-      
-      const childDoc = await BotUser.findOne({ userId, 'parentConnections.parentId': parentId });
-      const parentConnection = childDoc?.parentConnections?.find(pc => pc.parentId === parentId);
-      const childExpiresAt = parentConnection?.expiresAt && new Date(parentConnection.expiresAt) > now
-        ? new Date(new Date(parentConnection.expiresAt).getTime() + thirtyDaysMs)
-        : new Date(now.getTime() + thirtyDaysMs);
+    await BotUser.findOneAndUpdate(
+      { userId, 'parentConnections.parentId': parentId },
+      { $set: { 'parentConnections.$.approvalStatus': status } }
+    );
 
-      await BotUser.findOneAndUpdate(
-        { userId, 'parentConnections.parentId': parentId },
-        { $set: { 
-          'parentConnections.$.approvalStatus': status,
-          'parentConnections.$.expiresAt': childExpiresAt
-        }}
-      );
-
-      const parentDoc = await BotUser.findOne({ userId: parentId, 'childConnections.childId': userId });
-      const childConnection = parentDoc?.childConnections?.find(cc => cc.childId === userId);
-      const parentExpiresAt = childConnection?.expiresAt && new Date(childConnection.expiresAt) > now
-        ? new Date(new Date(childConnection.expiresAt).getTime() + thirtyDaysMs)
-        : new Date(now.getTime() + thirtyDaysMs);
-
-      await BotUser.findOneAndUpdate(
-        { userId: parentId, 'childConnections.childId': userId },
-        { $set: { 
-          'childConnections.$.approvalStatus': status,
-          'childConnections.$.expiresAt': parentExpiresAt
-        }}
-      );
-    } else {
-      await BotUser.findOneAndUpdate(
-        { userId, 'parentConnections.parentId': parentId },
-        { $set: { 'parentConnections.$.approvalStatus': status } }
-      );
-
-      await BotUser.findOneAndUpdate(
-        { userId: parentId, 'childConnections.childId': userId },
-        { $set: { 'childConnections.$.approvalStatus': status } }
-      );
-    }
+    await BotUser.findOneAndUpdate(
+      { userId: parentId, 'childConnections.childId': userId },
+      { $set: { 'childConnections.$.approvalStatus': status } }
+    );
 
     await ctx.answerCbQuery();
     await ctx.editMessageText(
@@ -796,32 +763,17 @@ export const reconnectParent = async (ctx: Context, parentId: number) => {
     const childLang = childUser.settings.language || 'uz';
     const parentLang = parentUser.settings.language || 'uz';
 
-    const now = new Date();
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    
-    const childConnection = childUser.parentConnections?.find(pc => pc.parentId === parentId);
-    const childExpiresAt = childConnection?.expiresAt && new Date(childConnection.expiresAt) > now
-      ? new Date(new Date(childConnection.expiresAt).getTime() + thirtyDaysMs)
-      : new Date(now.getTime() + thirtyDaysMs);
-
     await BotUser.findOneAndUpdate(
       { userId, 'parentConnections.parentId': parentId },
       { $set: { 
-        'parentConnections.$.approvalStatus': 'approved',
-        'parentConnections.$.expiresAt': childExpiresAt
+        'parentConnections.$.approvalStatus': 'approved'
       }}
     );
-
-    const parentConnection = parentUser.childConnections?.find(cc => cc.childId === userId);
-    const parentExpiresAt = parentConnection?.expiresAt && new Date(parentConnection.expiresAt) > now
-      ? new Date(new Date(parentConnection.expiresAt).getTime() + thirtyDaysMs)
-      : new Date(now.getTime() + thirtyDaysMs);
 
     await BotUser.findOneAndUpdate(
       { userId: parentId, 'childConnections.childId': userId },
       { $set: { 
-        'childConnections.$.approvalStatus': 'approved',
-        'childConnections.$.expiresAt': parentExpiresAt
+        'childConnections.$.approvalStatus': 'approved'
       }}
     );
 
