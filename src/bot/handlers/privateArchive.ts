@@ -85,9 +85,12 @@ export const handleAddPrivateChat = async (ctx: Context) => {
     const dialogs = await client.getDialogs({ limit: 100 });
     
     const privateChats = dialogs.filter((dialog: Dialog) => {
-      if (dialog.isUser && !dialog.entity.bot) {
-        const existingChat = user.privateArchive?.find(c => c.chatId === Number(dialog.id));
-        return !existingChat;
+      if (dialog.isUser && dialog.entity) {
+        const entity = dialog.entity as any;
+        if (!entity.bot) {
+          const existingChat = user.privateArchive?.find(c => c.chatId === Number(dialog.id));
+          return !existingChat;
+        }
       }
       return false;
     });
