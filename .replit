@@ -21,9 +21,9 @@ args = "OblivionLog"
 name = "OblivionLog"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
-
-[workflows.workflow.metadata]
-outputType = "console"
