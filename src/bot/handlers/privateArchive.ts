@@ -3,7 +3,6 @@ import { BotUser } from '../../mongodb/bot.user.schema';
 import { createLogger } from '../../utils/logger';
 import { privateArchiveKeyboard, privateManageKeyboard } from '../keyboards';
 import { getActiveClient } from '../../userbot/runUserBot';
-import { Dialog } from 'telegram/tl/custom/dialog';
 
 const logger = createLogger('PrivateArchiveHandler');
 
@@ -60,74 +59,42 @@ export const handleAddPrivateChat = async (ctx: Context) => {
 
     const lang = user.settings.language || 'uz';
     
-    const client = getActiveClient(userId);
-    if (!client) {
-      const message = lang === 'uz'
-        ? '⚠️ Userbot ulanmagan!'
-        : lang === 'en'
-        ? '⚠️ Userbot not connected!'
-        : '⚠️ Userbot не подключен!';
-      
-      await ctx.answerCbQuery(message);
-      return;
-    }
-
-    await ctx.answerCbQuery(lang === 'uz' ? 'Chatlar yuklanmoqda...' : lang === 'en' ? 'Loading chats...' : 'Загрузка чатов...');
+    await ctx.answerCbQuery();
     
     const infoText = lang === 'uz'
-      ? '💡 Bu chatlar uchun maxsus arxiv sozlamalarini belgilaysiz.\n\n⚠️ Default: Barcha chatlar arxivlanadi (media + message).\nFaqat istisno kerak bo\'lgan chatlarni qo\'shing.'
+      ? '💡 Bu chatlar uchun maxsus arxiv sozlamalarini belgilaysiz.\n\n⚠️ Default: Barcha chatlar arxivlanadi (media + message).\nFaqat istisno kerak bo\'lgan chatlarni qo\'shing.\n\n👇 Foydalanuvchi tanlang:'
       : lang === 'en'
-      ? '💡 Set custom archive settings for these chats.\n\n⚠️ Default: All chats are archived (media + message).\nOnly add chats that need exceptions.'
-      : '💡 Установите пользовательские настройки архивации.\n\n⚠️ По умолчанию: Все чаты архивируются (медиа + сообщения).\nДобавляйте только чаты, которым нужны исключения.';
+      ? '💡 Set custom archive settings for these chats.\n\n⚠️ Default: All chats are archived (media + message).\nOnly add chats that need exceptions.\n\n👇 Select a user:'
+      : '💡 Установите пользовательские настройки архивации.\n\n⚠️ По умолчанию: Все чаты архивируются (медиа + сообщения).\nДобавляйте только чаты, которым нужны исключения.\n\n👇 Выберите пользователя:';
     
-    await ctx.reply(infoText);
+    const buttonText = lang === 'uz'
+      ? '👤 Foydalanuvchi tanlash'
+      : lang === 'en'
+      ? '👤 Select User'
+      : '👤 Выбрать пользователя';
 
-    const dialogs = await client.getDialogs({ limit: 100 });
-    
-    const privateChats = dialogs.filter((dialog: Dialog) => {
-      if (dialog.isUser && dialog.entity) {
-        const entity = dialog.entity as any;
-        if (!entity.bot) {
-          const existingChat = user.privateArchive?.find(c => c.chatId === Number(dialog.id));
-          return !existingChat;
-        }
+    await ctx.reply(infoText, {
+      reply_markup: {
+        keyboard: [
+          [
+            {
+              text: buttonText,
+              request_users: {
+                request_id: 1,
+                user_is_bot: false,
+                max_quantity: 1
+              }
+            }
+          ]
+        ],
+        resize_keyboard: true,
+        one_time_keyboard: true
       }
-      return false;
     });
-
-    if (privateChats.length === 0) {
-      const message = lang === 'uz'
-        ? '⚠️ Hamma chatlar allaqachon qo\'shilgan yoki chatlar topilmadi.'
-        : lang === 'en'
-        ? '⚠️ All chats already added or no chats found.'
-        : '⚠️ Все чаты уже добавлены или чаты не найдены.';
-      
-      await ctx.editMessageText(message, {
-        reply_markup: {
-          inline_keyboard: [[{ text: lang === 'uz' ? '⬅️ Orqaga' : lang === 'en' ? '⬅️ Back' : '⬅️ Назад', callback_data: 'private_archive' }]]
-        }
-      });
-      return;
-    }
-
-    const buttons = privateChats.slice(0, 20).map((chat: Dialog) => {
-      const name = chat.name || chat.title || 'Unknown';
-      return [{ text: name, callback_data: `pa_select_${chat.id}` }];
-    });
-
-    buttons.push([{ text: lang === 'uz' ? '⬅️ Orqaga' : lang === 'en' ? '⬅️ Back' : '⬅️ Назад', callback_data: 'private_archive' }]);
-
-    const menuText = lang === 'uz'
-      ? `➕ Chat tanlang:\n\nTopildi: ${privateChats.length} ta chat`
-      : lang === 'en'
-      ? `➕ Select a chat:\n\nFound: ${privateChats.length} chats`
-      : `➕ Выберите чат:\n\nНайдено: ${privateChats.length} чатов`;
-
-    await ctx.editMessageText(menuText, { reply_markup: { inline_keyboard: buttons } });
     
-    logger.info({ userId, chatsFound: privateChats.length }, 'Private chat selection displayed');
+    logger.info({ userId }, 'User selection keyboard displayed');
   } catch (error) {
-    logger.error({ error, userId }, 'Error loading private chats');
+    logger.error({ error, userId }, 'Error showing user selector');
     await ctx.answerCbQuery('Error');
   }
 };
@@ -183,6 +150,96 @@ export const handleSelectPrivateChat = async (ctx: Context, chatId: string) => {
   } catch (error) {
     logger.error({ error, userId, chatId }, 'Error selecting private chat');
     await ctx.answerCbQuery('Error');
+  }
+};
+
+export const handleUsersShared = async (ctx: Context) => {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+
+  try {
+    const message = ctx.message as any;
+    if (!message?.users_shared?.users || message.users_shared.users.length === 0) {
+      return;
+    }
+
+    const sharedUser = message.users_shared.users[0];
+    const sharedUserId = sharedUser.user_id;
+
+    const user = await BotUser.findOne({ userId });
+    if (!user) return;
+
+    const lang = user.settings.language || 'uz';
+    
+    const existingChat = user.privateArchive?.find(c => c.chatId === sharedUserId);
+    if (existingChat) {
+      const alreadyAddedText = lang === 'uz'
+        ? `⚠️ Bu foydalanuvchi allaqachon istisnolar ro'yxatida!`
+        : lang === 'en'
+        ? `⚠️ This user is already in the exceptions list!`
+        : `⚠️ Этот пользователь уже в списке исключений!`;
+      
+      await ctx.reply(alreadyAddedText, {
+        reply_markup: { remove_keyboard: true }
+      });
+      return;
+    }
+
+    const client = getActiveClient(userId);
+    if (!client) {
+      const noClientText = lang === 'uz'
+        ? '⚠️ Userbot ulanmagan!'
+        : lang === 'en'
+        ? '⚠️ Userbot not connected!'
+        : '⚠️ Userbot не подключен!';
+      
+      await ctx.reply(noClientText, {
+        reply_markup: { remove_keyboard: true }
+      });
+      return;
+    }
+
+    let title = 'Unknown User';
+    try {
+      const entity = await client.getEntity(sharedUserId);
+      if ('firstName' in entity) {
+        const firstName = entity.firstName || '';
+        const lastName = entity.lastName || '';
+        title = `${firstName} ${lastName}`.trim() || title;
+      }
+    } catch (err) {
+      logger.warn({ userId, sharedUserId, error: err }, 'Could not fetch user entity, using default title');
+    }
+
+    await BotUser.findOneAndUpdate(
+      { userId },
+      {
+        $push: {
+          privateArchive: {
+            chatId: sharedUserId,
+            title,
+            archiveMedia: true,
+            archiveMessages: true,
+            addedAt: new Date()
+          }
+        }
+      }
+    );
+
+    const successText = lang === 'uz'
+      ? `✅ "${title}" istisnolar ro'yxatiga qo'shildi!\n\n💡 Default: Xabarlar ✅ | Media ✅\n\nSozlamalarni o'zgartirish uchun /settings ni bosing.`
+      : lang === 'en'
+      ? `✅ "${title}" added to exceptions!\n\n💡 Default: Messages ✅ | Media ✅\n\nPress /settings to customize.`
+      : `✅ "${title}" добавлен в исключения!\n\n💡 По умолчанию: Сообщения ✅ | Медиа ✅\n\nНажмите /settings для настройки.`;
+
+    await ctx.reply(successText, {
+      reply_markup: { remove_keyboard: true }
+    });
+    
+    logger.info({ userId, sharedUserId, title }, 'User added to exceptions via users_shared');
+  } catch (error) {
+    logger.error({ error, userId }, 'Error handling users_shared');
+    await ctx.reply('Error adding user to exceptions');
   }
 };
 
