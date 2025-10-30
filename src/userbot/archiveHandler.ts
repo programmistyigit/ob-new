@@ -378,7 +378,7 @@ const forwardToParentMonitoring = async (
     
     if (message.media && !media?.localPath) {
       try {
-        ensureDirectoryExists(env.MEDIA_DIR || './archives_media');
+        await ensureDirectoryExists(env.MEDIA_DIR || './archives_media');
         
         const extension = getMediaExtension(message.media);
         const tempPath = getTempFilePath(extension);

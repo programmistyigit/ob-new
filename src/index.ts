@@ -4,12 +4,17 @@ import { connectToMongoDB } from './mongodb/connection';
 import { createLogger } from './utils/logger';
 import { migrateOldSessions } from './userbot/login/migrateSessions';
 import { startSubscriptionChecker } from './services/subscriptionChecker';
+import { ensureDirectoryExists } from './utils/helpers';
+import { env } from './config/env';
 
 const logger = createLogger('Main');
 
 async function main() {
   try {
     logger.info('Starting OblivionLog...');
+
+    await ensureDirectoryExists(env.MEDIA_DIR || './archives_media');
+    logger.info('Media directory ready');
 
     await connectToMongoDB();
     logger.info('MongoDB connected');
