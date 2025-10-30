@@ -2,7 +2,7 @@ import { Telegraf } from 'telegraf';
 import { env } from '../config/env';
 import { createLogger } from '../utils/logger';
 import { handleStart, handleConnect, handleContact, handleSettings, handleToggleSaved, handleDeleteMe, handleDeleteConfirm, handleDeleteCancel, handleToggleMessage, handleToggleMedia, handleDisableArchive, handleSettingsBack, handleParentalControl, handleConnectChild, handleMyChildren, sendApprovalRequest, handleApproval, viewParentConnections, viewParentDetail, disconnectFromParent, disconnectFromChild, viewChildDetail, reconnectChild, reconnectParent, deleteChild, deleteParent, handleReconnectApproval } from './handlers';
-import { handleGroupArchive, handleAddGroup, handleSelectGroup, handleGroupManage, handleToggleGroupMessages, handleToggleGroupMedia, handleRemoveGroup } from './handlers/groupArchive';
+import { handleGroupArchive, handleAddGroup, handleSelectGroup, handleGroupManage, handleToggleGroupMessages, handleToggleGroupMedia, handleRemoveGroup, handleChatsShared } from './handlers/groupArchive';
 import { handlePrivateArchive, handleAddPrivateChat, handleSelectPrivateChat, handlePrivateChatManage, handleTogglePrivateMessages, handleTogglePrivateMedia, handleRemovePrivateChat, handleUsersShared } from './handlers/privateArchive';
 import { createStarsInvoice, handleSuccessfulPayment, handlePreCheckoutQuery, createMonitoringInvoice, handleMonitoringPayment } from './payments';
 import { handleCodeCallback } from './controllers/codeInput';
@@ -297,6 +297,7 @@ export const createBot = (): Telegraf => {
 
   bot.on('contact', handleContact);
   bot.on('users_shared', handleUsersShared);
+  bot.on('chat_shared', handleChatsShared);
   
   bot.on('pre_checkout_query', handlePreCheckoutQuery);
   bot.on('successful_payment', async (ctx) => {

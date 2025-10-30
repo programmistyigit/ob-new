@@ -3,7 +3,6 @@ import { BotUser } from '../../mongodb/bot.user.schema';
 import { createLogger } from '../../utils/logger';
 import { groupArchiveKeyboard, groupManageKeyboard } from '../keyboards';
 import { getActiveClient } from '../../userbot/runUserBot';
-import { Dialog } from 'telegram/tl/custom/dialog';
 
 const logger = createLogger('GroupArchiveHandler');
 
@@ -60,63 +59,41 @@ export const handleAddGroup = async (ctx: Context) => {
 
     const lang = user.settings.language || 'uz';
     
-    const client = getActiveClient(userId);
-    if (!client) {
-      const message = lang === 'uz'
-        ? '⚠️ Userbot ulanmagan!'
-        : lang === 'en'
-        ? '⚠️ Userbot not connected!'
-        : '⚠️ Userbot не подключен!';
-      
-      await ctx.answerCbQuery(message);
-      return;
-    }
-
-    await ctx.answerCbQuery(lang === 'uz' ? 'Guruhlar yuklanmoqda...' : lang === 'en' ? 'Loading groups...' : 'Загрузка групп...');
-
-    const dialogs = await client.getDialogs({ limit: 100 });
+    await ctx.answerCbQuery();
     
-    const groups = dialogs.filter((dialog: Dialog) => {
-      if (dialog.isGroup || dialog.isChannel) {
-        const existingGroup = user.groupArchive?.find(g => g.chatId === Number(dialog.id));
-        return !existingGroup;
-      }
-      return false;
-    });
-
-    if (groups.length === 0) {
-      const message = lang === 'uz'
-        ? '⚠️ Hamma guruhlar allaqachon qo\'shilgan yoki guruhlar topilmadi.'
-        : lang === 'en'
-        ? '⚠️ All groups already added or no groups found.'
-        : '⚠️ Все группы уже добавлены или группы не найдены.';
-      
-      await ctx.editMessageText(message, {
-        reply_markup: {
-          inline_keyboard: [[{ text: lang === 'uz' ? '⬅️ Orqaga' : lang === 'en' ? '⬅️ Back' : '⬅️ Назад', callback_data: 'group_archive' }]]
-        }
-      });
-      return;
-    }
-
-    const buttons = groups.slice(0, 20).map((group: Dialog) => {
-      const title = group.title || 'Unknown';
-      return [{ text: title, callback_data: `ga_select_${group.id}` }];
-    });
-
-    buttons.push([{ text: lang === 'uz' ? '⬅️ Orqaga' : lang === 'en' ? '⬅️ Back' : '⬅️ Назад', callback_data: 'group_archive' }]);
-
-    const menuText = lang === 'uz'
-      ? `➕ Guruh tanlang:\n\nTopildi: ${groups.length} ta guruh`
+    const infoText = lang === 'uz'
+      ? '📂 Guruh arxivi sozlamalari\n\n💡 Qo\'shilgan guruhlarning barcha xabarlari arxivlanadi.\n\n👇 Guruh tanlang:'
       : lang === 'en'
-      ? `➕ Select a group:\n\nFound: ${groups.length} groups`
-      : `➕ Выберите группу:\n\nНайдено: ${groups.length} групп`;
-
-    await ctx.editMessageText(menuText, { reply_markup: { inline_keyboard: buttons } });
+      ? '📂 Group Archive Settings\n\n💡 All messages from added groups will be archived.\n\n👇 Select a group:'
+      : '📂 Настройки архива групп\n\n💡 Все сообщения из добавленных групп будут архивироваться.\n\n👇 Выберите группу:';
     
-    logger.info({ userId, groupsFound: groups.length }, 'Group selection displayed');
+    const buttonText = lang === 'uz'
+      ? '👥 Guruh tanlash'
+      : lang === 'en'
+      ? '👥 Select Group'
+      : '👥 Выбрать группу';
+
+    await ctx.reply(infoText, {
+      reply_markup: {
+        keyboard: [
+          [
+            {
+              text: buttonText,
+              request_chat: {
+                request_id: 2,
+                chat_is_channel: false
+              }
+            }
+          ]
+        ],
+        resize_keyboard: true,
+        one_time_keyboard: true
+      }
+    });
+    
+    logger.info({ userId }, 'Group selection keyboard displayed');
   } catch (error) {
-    logger.error({ error, userId }, 'Error loading groups');
+    logger.error({ error, userId }, 'Error showing group selector');
     await ctx.answerCbQuery('Error');
   }
 };
@@ -298,5 +275,90 @@ export const handleRemoveGroup = async (ctx: Context, chatIdStr: string) => {
   } catch (error) {
     logger.error({ error, userId, chatId: chatIdStr }, 'Error removing group');
     await ctx.answerCbQuery('Error');
+  }
+};
+
+export const handleChatsShared = async (ctx: Context) => {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+
+  try {
+    const message = ctx.message as any;
+    if (!message?.chat_shared?.chat_id) {
+      return;
+    }
+
+    const sharedChatId = message.chat_shared.chat_id;
+
+    const user = await BotUser.findOne({ userId });
+    if (!user) return;
+
+    const lang = user.settings.language || 'uz';
+    
+    const existingGroup = user.groupArchive?.find(g => g.chatId === sharedChatId);
+    if (existingGroup) {
+      const alreadyAddedText = lang === 'uz'
+        ? `⚠️ Bu guruh allaqachon arxiv ro'yxatida!`
+        : lang === 'en'
+        ? `⚠️ This group is already in the archive list!`
+        : `⚠️ Эта группа уже в списке архива!`;
+      
+      await ctx.reply(alreadyAddedText);
+      return;
+    }
+
+    const client = getActiveClient(userId);
+    if (!client) {
+      const noClientText = lang === 'uz'
+        ? '⚠️ Userbot ulanmagan!'
+        : lang === 'en'
+        ? '⚠️ Userbot not connected!'
+        : '⚠️ Userbot не подключен!';
+      
+      await ctx.reply(noClientText);
+      return;
+    }
+
+    let title = 'Unknown Group';
+    try {
+      const entity = await client.getEntity(sharedChatId);
+      if ('title' in entity) {
+        title = entity.title || title;
+      }
+    } catch (err) {
+      logger.warn({ userId, sharedChatId, error: err }, 'Could not fetch group entity, using default title');
+    }
+
+    await BotUser.findOneAndUpdate(
+      { userId },
+      {
+        $push: {
+          groupArchive: {
+            chatId: sharedChatId,
+            title,
+            archiveMedia: true,
+            archiveMessages: true,
+            addedAt: new Date()
+          }
+        }
+      }
+    );
+
+    logger.info({ userId, sharedChatId, title }, 'Group added to archive via chat_shared');
+    
+    const groups = (await BotUser.findOne({ userId }))?.groupArchive || [];
+    
+    const menuText = lang === 'uz'
+      ? `📂 Guruh arxivi\n\n✅ "${title}" qo'shildi!\n\nQo'shilgan: ${groups.length} ta guruh`
+      : lang === 'en'
+      ? `📂 Group Archive\n\n✅ "${title}" added!\n\nAdded: ${groups.length} groups`
+      : `📂 Архив групп\n\n✅ "${title}" добавлена!\n\nДобавлено: ${groups.length} групп`;
+
+    const keyboard = groupArchiveKeyboard(groups, lang);
+
+    await ctx.reply(menuText, keyboard);
+  } catch (error) {
+    logger.error({ error, userId }, 'Error handling chat_shared');
+    await ctx.reply('Error adding group to archive');
   }
 };
