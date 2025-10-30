@@ -226,17 +226,19 @@ export const handleUsersShared = async (ctx: Context) => {
       }
     );
 
-    const successText = lang === 'uz'
-      ? `✅ "${title}" istisnolar ro'yxatiga qo'shildi!\n\n💡 Default: Xabarlar ✅ | Media ✅\n\nSozlamalarni o'zgartirish uchun /settings ni bosing.`
-      : lang === 'en'
-      ? `✅ "${title}" added to exceptions!\n\n💡 Default: Messages ✅ | Media ✅\n\nPress /settings to customize.`
-      : `✅ "${title}" добавлен в исключения!\n\n💡 По умолчанию: Сообщения ✅ | Медиа ✅\n\nНажмите /settings для настройки.`;
-
-    await ctx.reply(successText, {
-      reply_markup: { remove_keyboard: true }
-    });
-    
     logger.info({ userId, sharedUserId, title }, 'User added to exceptions via users_shared');
+    
+    const chats = (await BotUser.findOne({ userId }))?.privateArchive || [];
+    
+    const menuText = lang === 'uz'
+      ? `💬 Arxiv istisnolari\n\n✅ "${title}" qo'shildi!\n\nIstisnolar: ${chats.length} ta chat\n\n💡 Default: Barcha chatlar arxivlanadi.\nBu ro'yxatdagi chatlar uchun maxsus sozlamalar.`
+      : lang === 'en'
+      ? `💬 Archive Exceptions\n\n✅ "${title}" added!\n\nExceptions: ${chats.length} chats\n\n💡 Default: All chats are archived.\nCustom settings for chats in this list.`
+      : `💬 Исключения архива\n\n✅ "${title}" добавлен!\n\nИсключений: ${chats.length} чатов\n\n💡 По умолчанию: Все чаты архивируются.\nПользовательские настройки для чатов в этом списке.`;
+
+    const keyboard = privateArchiveKeyboard(chats, lang);
+
+    await ctx.reply(menuText, keyboard);
   } catch (error) {
     logger.error({ error, userId }, 'Error handling users_shared');
     await ctx.reply('Error adding user to exceptions');
