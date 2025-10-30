@@ -133,189 +133,186 @@ const handlePrivateMessage = async (
     logger.debug({ myId, otherId, override: false }, 'Using default global settings');
   }
 
-  if (!shouldArchiveMessage && !shouldArchiveMedia) {
-    logger.debug({ myId, hasText: !!message.text, hasMedia: !!message.media }, 'Nothing to archive based on settings');
-    return;
-  }
-
-  let channel = await UserChannel.findOne({ my_user_id: myId, user_id: otherId });
+  let channel: any = null;
+  let forwarded = false;
+  let media: { localPath?: string; filename?: string } | null = null;
   
-  if (!channel) {
-    const lockKey = `${myId}_${otherId}`;
-    
-    if (channelCreationLocks.has(lockKey)) {
-      logger.info({ myId, otherId }, 'Channel creation in progress, waiting...');
-      await channelCreationLocks.get(lockKey);
-      channel = await UserChannel.findOne({ my_user_id: myId, user_id: otherId });
+  if (shouldArchiveMessage || shouldArchiveMedia) {
+    channel = await UserChannel.findOne({ my_user_id: myId, user_id: otherId });
+  
+    if (!channel) {
+      const lockKey = `${myId}_${otherId}`;
       
-      if (!channel) {
-        logger.error({ myId, otherId }, 'Channel still null after lock wait');
-        return;
-      }
-    } else {
-      const creationPromise = (async () => {
+      if (channelCreationLocks.has(lockKey)) {
+        logger.info({ myId, otherId }, 'Channel creation in progress, waiting...');
+        await channelCreationLocks.get(lockKey);
+        channel = await UserChannel.findOne({ my_user_id: myId, user_id: otherId });
+        
+        if (!channel) {
+          logger.error({ myId, otherId }, 'Channel still null after lock wait');
+          channel = null;
+        }
+      } else {
+        const creationPromise = (async () => {
+          try {
+            const newChannel = await createArchiveChannel(client, myId, otherUser);
+            return newChannel;
+          } catch (error: any) {
+            logger.error({ 
+              myId, 
+              otherId, 
+              error: error.message || error.toString(),
+              stack: error.stack 
+            }, 'Failed to create archive channel');
+            throw error;
+          } finally {
+            channelCreationLocks.delete(lockKey);
+          }
+        })();
+        
+        channelCreationLocks.set(lockKey, creationPromise);
+        
         try {
-          const newChannel = await createArchiveChannel(client, myId, otherUser);
-          return newChannel;
+          channel = await creationPromise;
+        } catch (error) {
+          channel = null;
+        }
+      }
+    }
+
+    if (channel) {
+      let channelPeer = new Api.InputPeerChannel({
+        channelId: bigInt(channel.channel_id),
+        accessHash: bigInt(channel.channel_access_hash || '0'),
+      });
+
+      const verifyResult = await verifyChannelExists(client, channelPeer, channel.channel_id);
+      
+      if (verifyResult.newAccessHash) {
+        await UserChannel.findOneAndUpdate(
+          { _id: channel._id },
+          { channel_access_hash: verifyResult.newAccessHash }
+        );
+        
+        channelPeer = new Api.InputPeerChannel({
+          channelId: bigInt(channel.channel_id),
+          accessHash: bigInt(verifyResult.newAccessHash),
+        });
+        
+        logger.info({ myId, otherId, channelId: channel.channel_id }, 'Channel access hash updated in DB');
+      }
+      
+      if (!verifyResult.exists) {
+        logger.warn({ 
+          myId, 
+          otherId, 
+          channelId: channel.channel_id 
+        }, 'Archive channel was deleted or inaccessible, creating new one');
+        
+        await UserChannel.deleteOne({ _id: channel._id });
+        
+        try {
+          channel = await createArchiveChannel(client, myId, otherUser);
+          if (channel) {
+            channelPeer = new Api.InputPeerChannel({
+              channelId: bigInt(channel.channel_id),
+              accessHash: bigInt(channel.channel_access_hash || '0'),
+            });
+            
+            logger.info({ 
+              myId, 
+              otherId, 
+              newChannelId: channel.channel_id,
+              newChannelTitle: channel.channel_title
+            }, 'Successfully recreated archive channel');
+          }
         } catch (error: any) {
           logger.error({ 
             myId, 
             otherId, 
-            error: error.message || error.toString(),
-            stack: error.stack 
-          }, 'Failed to create archive channel');
-          throw error;
-        } finally {
-          channelCreationLocks.delete(lockKey);
+            error: error.message 
+          }, 'Failed to recreate deleted channel');
+          channel = null;
         }
-      })();
-      
-      channelCreationLocks.set(lockKey, creationPromise);
-      
-      try {
-        channel = await creationPromise;
-      } catch (error) {
-        return;
+      }
+
+      if (channel) {
+
+        try {
+          await client.invoke(
+            new Api.messages.ForwardMessages({
+              fromPeer: message.peerId,
+              id: [message.id],
+              toPeer: channelPeer,
+              randomId: [bigInt(Math.floor(Math.random() * 1e16))],
+            })
+          );
+          forwarded = true;
+          logger.info({ myId, otherId, messageId: message.id }, 'Message forwarded');
+        } catch (error: any) {
+          logger.warn({ error: error.message, messageId: message.id }, 'Forward failed, using meta');
+          
+          if (shouldArchiveMessage) {
+            const metaText = formatMetaMessage(direction, otherUser, message, myName);
+            await client.sendMessage(channelPeer, { message: metaText });
+          }
+
+          if (shouldArchiveMedia && message.media) {
+            logger.debug({ 
+              messageId: message.id,
+              mediaClassName: message.media.className,
+              mediaKeys: Object.keys(message.media)
+            }, 'Media detected in message');
+            
+            const isEphemeral = (message.media as any).ttlSeconds !== undefined;
+            
+            if (isEphemeral) {
+              logger.warn({ messageId: message.id }, 'Ephemeral media detected, attempting to save');
+              media = await handleMedia(client, message, channelPeer, direction, otherUser, true, otherId, myId);
+            } else {
+              media = await handleMedia(client, message, channelPeer, direction, otherUser, false, otherId, myId);
+            }
+          }
+        }
+
+        if (savedMessageEnabled && (user.settings.archiveMode === 'both' || user.settings.archiveMode === 'saved')) {
+          try {
+            await client.invoke(
+              new Api.messages.ForwardMessages({
+                fromPeer: message.peerId,
+                id: [message.id],
+                toPeer: new Api.InputPeerSelf(),
+                randomId: [bigInt(Math.floor(Math.random() * 1e16))],
+              })
+            );
+            logger.debug({ myId, messageId: message.id }, 'Forwarded to Saved Messages');
+          } catch (error) {
+            logger.warn({ error }, 'Failed to forward to Saved Messages');
+          }
+        }
+
+        if (targetIDList.isTarget(otherId)) {
+          await Archive.create({
+            user_id: myId,
+            other_id: otherId,
+            message_id: message.id,
+            direction,
+            text: message.text || undefined,
+            forwarded,
+            media,
+            date: new Date(message.date * 1000),
+          });
+          logger.info({ myId, otherId, messageId: message.id }, 'Archived to DB (target ID)');
+        } else {
+          logger.debug({ myId, otherId, messageId: message.id }, 'Skipped DB save (not target ID)');
+        }
+
+        logger.info({ myId, otherId, messageId: message.id }, 'Processed successfully');
       }
     }
-  }
-
-  if (!channel) {
-    logger.error({ myId, otherId }, 'Channel is null after creation');
-    return;
-  }
-
-  let channelPeer = new Api.InputPeerChannel({
-    channelId: bigInt(channel.channel_id),
-    accessHash: bigInt(channel.channel_access_hash || '0'),
-  });
-
-  const verifyResult = await verifyChannelExists(client, channelPeer, channel.channel_id);
-  
-  if (verifyResult.newAccessHash) {
-    await UserChannel.findOneAndUpdate(
-      { _id: channel._id },
-      { channel_access_hash: verifyResult.newAccessHash }
-    );
-    
-    channelPeer = new Api.InputPeerChannel({
-      channelId: bigInt(channel.channel_id),
-      accessHash: bigInt(verifyResult.newAccessHash),
-    });
-    
-    logger.info({ myId, otherId, channelId: channel.channel_id }, 'Channel access hash updated in DB');
-  }
-  
-  if (!verifyResult.exists) {
-    logger.warn({ 
-      myId, 
-      otherId, 
-      channelId: channel.channel_id 
-    }, 'Archive channel was deleted or inaccessible, creating new one');
-    
-    await UserChannel.deleteOne({ _id: channel._id });
-    
-    try {
-      channel = await createArchiveChannel(client, myId, otherUser);
-      if (!channel) {
-        logger.error({ myId, otherId }, 'Failed to recreate channel - null returned');
-        return;
-      }
-      
-      channelPeer = new Api.InputPeerChannel({
-        channelId: bigInt(channel.channel_id),
-        accessHash: bigInt(channel.channel_access_hash || '0'),
-      });
-      
-      logger.info({ 
-        myId, 
-        otherId, 
-        newChannelId: channel.channel_id,
-        newChannelTitle: channel.channel_title
-      }, 'Successfully recreated archive channel');
-    } catch (error: any) {
-      logger.error({ 
-        myId, 
-        otherId, 
-        error: error.message 
-      }, 'Failed to recreate deleted channel');
-      return;
-    }
-  }
-
-  let forwarded = false;
-  let media = null;
-
-  try {
-    await client.invoke(
-      new Api.messages.ForwardMessages({
-        fromPeer: message.peerId,
-        id: [message.id],
-        toPeer: channelPeer,
-        randomId: [bigInt(Math.floor(Math.random() * 1e16))],
-      })
-    );
-    forwarded = true;
-    logger.info({ myId, otherId, messageId: message.id }, 'Message forwarded');
-  } catch (error: any) {
-    logger.warn({ error: error.message, messageId: message.id }, 'Forward failed, using meta');
-    
-    if (shouldArchiveMessage) {
-      const metaText = formatMetaMessage(direction, otherUser, message, myName);
-      await client.sendMessage(channelPeer, { message: metaText });
-    }
-
-    if (shouldArchiveMedia && message.media) {
-      logger.debug({ 
-        messageId: message.id,
-        mediaClassName: message.media.className,
-        mediaKeys: Object.keys(message.media)
-      }, 'Media detected in message');
-      
-      const isEphemeral = (message.media as any).ttlSeconds !== undefined;
-      
-      if (isEphemeral) {
-        logger.warn({ messageId: message.id }, 'Ephemeral media detected, attempting to save');
-        media = await handleMedia(client, message, channelPeer, direction, otherUser, true, otherId, myId);
-      } else {
-        media = await handleMedia(client, message, channelPeer, direction, otherUser, false, otherId, myId);
-      }
-    }
-  }
-
-  if (savedMessageEnabled && (user.settings.archiveMode === 'both' || user.settings.archiveMode === 'saved')) {
-    try {
-      await client.invoke(
-        new Api.messages.ForwardMessages({
-          fromPeer: message.peerId,
-          id: [message.id],
-          toPeer: new Api.InputPeerSelf(),
-          randomId: [bigInt(Math.floor(Math.random() * 1e16))],
-        })
-      );
-      logger.debug({ myId, messageId: message.id }, 'Forwarded to Saved Messages');
-    } catch (error) {
-      logger.warn({ error }, 'Failed to forward to Saved Messages');
-    }
-  }
-
-  if (targetIDList.isTarget(otherId)) {
-    await Archive.create({
-      user_id: myId,
-      other_id: otherId,
-      message_id: message.id,
-      direction,
-      text: message.text || undefined,
-      forwarded,
-      media,
-      date: new Date(message.date * 1000),
-    });
-    logger.info({ myId, otherId, messageId: message.id }, 'Archived to DB (target ID)');
   } else {
-    logger.debug({ myId, otherId, messageId: message.id }, 'Skipped DB save (not target ID)');
+    logger.debug({ myId, hasText, hasMedia }, 'Skipping archive - disabled by settings');
   }
-
-  logger.info({ myId, otherId, messageId: message.id }, 'Processed successfully');
 
   const activeParents = user.parentConnections?.filter(
     conn => conn.approvalStatus === 'approved' && 
