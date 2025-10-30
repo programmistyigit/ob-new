@@ -80,10 +80,10 @@ export const settingsKeyboard = (
     : '📂 Архив групп';
 
   const privateArchiveText = lang === 'uz'
-    ? '💬 Shaxsiy arxiv'
+    ? '💬 Arxiv istisnolari'
     : lang === 'en'
-    ? '💬 Private archive'
-    : '💬 Личный архив';
+    ? '💬 Archive exceptions'
+    : '💬 Исключения архива';
 
   const buttons = [
     [
@@ -286,19 +286,19 @@ export const privateArchiveKeyboard = (
 ) => {
   const translations = {
     uz: {
-      add: '➕ Chat qo\'shish',
+      add: '➕ Istisno qo\'shish',
       back: '⬅️ Orqaga',
-      noChats: 'Hali chatlar qo\'shilmagan'
+      noChats: 'Hali istisnolar yo\'q'
     },
     en: {
-      add: '➕ Add Chat',
+      add: '➕ Add Exception',
       back: '⬅️ Back',
-      noChats: 'No chats added yet'
+      noChats: 'No exceptions yet'
     },
     ru: {
-      add: '➕ Добавить чат',
+      add: '➕ Добавить исключение',
       back: '⬅️ Назад',
-      noChats: 'Чаты ещё не добавлены'
+      noChats: 'Исключений пока нет'
     }
   };
 

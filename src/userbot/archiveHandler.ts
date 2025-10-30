@@ -100,31 +100,28 @@ const handlePrivateMessage = async (
     logger.debug({ myId }, 'Could not fetch my name');
   }
 
+  const savedMessageEnabled = typeof user.settings.savedMessage === 'boolean'
+    ? user.settings.savedMessage
+    : user.settings.savedMessage?.enabled || false;
+
+  if (!savedMessageEnabled) {
+    logger.debug({ myId }, 'Global archive disabled, skipping');
+    return;
+  }
+
   const perChatSettings = user.privateArchive?.find(c => c.chatId === otherId);
   
   let shouldArchiveMessage: boolean;
   let shouldArchiveMedia: boolean;
+  const hasText = message.text && message.text.length > 0;
+  const hasMedia = !!message.media;
   
   if (perChatSettings) {
-    const hasText = message.text && message.text.length > 0;
-    const hasMedia = !!message.media;
     shouldArchiveMessage = perChatSettings.archiveMessages && hasText;
     shouldArchiveMedia = perChatSettings.archiveMedia && hasMedia;
     
-    logger.debug({ myId, otherId, perChat: true }, 'Using per-chat archive settings');
+    logger.debug({ myId, otherId, override: true, archiveMsg: perChatSettings.archiveMessages, archiveMedia: perChatSettings.archiveMedia }, 'Using per-chat override settings');
   } else {
-    const savedMessageEnabled = typeof user.settings.savedMessage === 'boolean'
-      ? user.settings.savedMessage
-      : user.settings.savedMessage?.enabled || false;
-
-    if (!savedMessageEnabled) {
-      logger.debug({ myId }, 'Saved message disabled, skipping archive');
-      return;
-    }
-
-    const hasText = message.text && message.text.length > 0;
-    const hasMedia = !!message.media;
-
     shouldArchiveMessage = typeof user.settings.savedMessage === 'boolean'
       ? hasText
       : (user.settings.savedMessage?.message && hasText) || false;
@@ -133,7 +130,7 @@ const handlePrivateMessage = async (
       ? hasMedia
       : (user.settings.savedMessage?.media && hasMedia) || false;
       
-    logger.debug({ myId, otherId, perChat: false }, 'Using global archive settings');
+    logger.debug({ myId, otherId, override: false }, 'Using default global settings');
   }
 
   if (!shouldArchiveMessage && !shouldArchiveMedia) {

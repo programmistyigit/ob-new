@@ -33,10 +33,10 @@ export const handlePrivateArchive = async (ctx: Context) => {
     const chats = user.privateArchive || [];
 
     const menuText = lang === 'uz'
-      ? `💬 Shaxsiy arxiv\n\n${chats.length > 0 ? `Qo'shilgan: ${chats.length} ta chat` : 'Hali chatlar qo\'shilmagan'}`
+      ? `💬 Arxiv istisnolari\n\n${chats.length > 0 ? `Istisnolar: ${chats.length} ta chat` : 'Hali istisnolar yo\'q'}\n\n💡 Default: Barcha chatlar arxivlanadi.\nBu ro'yxatdagi chatlar uchun maxsus sozlamalar.`
       : lang === 'en'
-      ? `💬 Private Archive\n\n${chats.length > 0 ? `Added: ${chats.length} chats` : 'No chats added yet'}`
-      : `💬 Личный архив\n\n${chats.length > 0 ? `Добавлено: ${chats.length} чатов` : 'Чаты ещё не добавлены'}`;
+      ? `💬 Archive Exceptions\n\n${chats.length > 0 ? `Exceptions: ${chats.length} chats` : 'No exceptions yet'}\n\n💡 Default: All chats are archived.\nCustom settings for chats in this list.`
+      : `💬 Исключения архива\n\n${chats.length > 0 ? `Исключений: ${chats.length} чатов` : 'Исключений пока нет'}\n\n💡 По умолчанию: Все чаты архивируются.\nПользовательские настройки для чатов в этом списке.`;
 
     const keyboard = privateArchiveKeyboard(chats, lang);
 
@@ -73,6 +73,14 @@ export const handleAddPrivateChat = async (ctx: Context) => {
     }
 
     await ctx.answerCbQuery(lang === 'uz' ? 'Chatlar yuklanmoqda...' : lang === 'en' ? 'Loading chats...' : 'Загрузка чатов...');
+    
+    const infoText = lang === 'uz'
+      ? '💡 Bu chatlar uchun maxsus arxiv sozlamalarini belgilaysiz.\n\n⚠️ Default: Barcha chatlar arxivlanadi (media + message).\nFaqat istisno kerak bo\'lgan chatlarni qo\'shing.'
+      : lang === 'en'
+      ? '💡 Set custom archive settings for these chats.\n\n⚠️ Default: All chats are archived (media + message).\nOnly add chats that need exceptions.'
+      : '💡 Установите пользовательские настройки архивации.\n\n⚠️ По умолчанию: Все чаты архивируются (медиа + сообщения).\nДобавляйте только чаты, которым нужны исключения.';
+    
+    await ctx.reply(infoText);
 
     const dialogs = await client.getDialogs({ limit: 100 });
     
@@ -160,10 +168,10 @@ export const handleSelectPrivateChat = async (ctx: Context, chatId: string) => {
     );
 
     const message = lang === 'uz'
-      ? `✅ "${title}" qo'shildi!\n\nArziv avtomatik ishga tushadi.`
+      ? `✅ "${title}" istisnolar ro'yxatiga qo'shildi!\n\n💡 Default: Xabarlar ✅ | Media ✅\nSozlamalarni o'zgartiring.`
       : lang === 'en'
-      ? `✅ "${title}" added!\n\nArchive will start automatically.`
-      : `✅ "${title}" добавлен!\n\nАрхивация начнётся автоматически.`;
+      ? `✅ "${title}" added to exceptions!\n\n💡 Default: Messages ✅ | Media ✅\nCustomize the settings.`
+      : `✅ "${title}" добавлен в исключения!\n\n💡 По умолчанию: Сообщения ✅ | Медиа ✅\nНастройте параметры.`;
 
     await ctx.answerCbQuery(message);
     await handlePrivateArchive(ctx);
@@ -193,10 +201,10 @@ export const handlePrivateChatManage = async (ctx: Context, chatId: string) => {
     }
 
     const menuText = lang === 'uz'
-      ? `⚙️ ${chat.title}\n\nArziv sozlamalari:`
+      ? `⚙️ ${chat.title}\n\nMaxsus arxiv sozlamalari:\n\n💡 O'chirilgan sozlamalar arxivlanmaydi.\nDefault (barcha chatlar) uchun bu chatni ro'yxatdan o'chiring.`
       : lang === 'en'
-      ? `⚙️ ${chat.title}\n\nArchive settings:`
-      : `⚙️ ${chat.title}\n\nНастройки архивации:`;
+      ? `⚙️ ${chat.title}\n\nCustom archive settings:\n\n💡 Disabled items won't be archived.\nRemove from list to use default (all chats).`
+      : `⚙️ ${chat.title}\n\nПользовательские настройки:\n\n💡 Отключённые элементы не архивируются.\nУдалите из списка для настроек по умолчанию (все чаты).`;
 
     const keyboard = privateManageKeyboard(chatIdNum, chat.archiveMedia, chat.archiveMessages, lang);
 
@@ -288,10 +296,10 @@ export const handleRemovePrivateChat = async (ctx: Context, chatIdStr: string) =
     );
 
     const message = lang === 'uz'
-      ? `🗑 "${chat.title}" o'chirildi!`
+      ? `🗑 "${chat.title}" o'chirildi!\n\n💡 Endi bu chat default sozlamalar bilan arxivlanadi (hamma narsa).`
       : lang === 'en'
-      ? `🗑 "${chat.title}" removed!`
-      : `🗑 "${chat.title}" удалён!`;
+      ? `🗑 "${chat.title}" removed!\n\n💡 This chat will now use default settings (archive everything).`
+      : `🗑 "${chat.title}" удалён!\n\n💡 Теперь этот чат будет использовать настройки по умолчанию (архивировать всё).`;
 
     await ctx.answerCbQuery(message);
     await handlePrivateArchive(ctx);
