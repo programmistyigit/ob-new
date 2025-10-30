@@ -85,6 +85,12 @@ export const settingsKeyboard = (
     ? '💬 Archive exceptions'
     : '💬 Исключения архива';
 
+  const exportText = lang === 'uz'
+    ? '📤 Export'
+    : lang === 'en'
+    ? '📤 Export'
+    : '📤 Экспорт';
+
   const buttons = [
     [
       Markup.button.callback(archiveText, 'toggle_saved'),
@@ -94,6 +100,9 @@ export const settingsKeyboard = (
     ],
     [
       Markup.button.callback(groupArchiveText, 'group_archive'),
+    ],
+    [
+      Markup.button.callback(exportText, 'export_menu'),
     ],
     [
       Markup.button.callback(pcText, 'parental_control'),

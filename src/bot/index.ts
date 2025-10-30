@@ -4,6 +4,7 @@ import { createLogger } from '../utils/logger';
 import { handleStart, handleConnect, handleContact, handleSettings, handleToggleSaved, handleDeleteMe, handleDeleteConfirm, handleDeleteCancel, handleToggleMessage, handleToggleMedia, handleDisableArchive, handleSettingsBack, handleParentalControl, handleConnectChild, handleMyChildren, sendApprovalRequest, handleApproval, viewParentConnections, viewParentDetail, disconnectFromParent, disconnectFromChild, viewChildDetail, reconnectChild, reconnectParent, deleteChild, deleteParent, handleReconnectApproval } from './handlers';
 import { handleGroupArchive, handleAddGroup, handleSelectGroup, handleGroupManage, handleToggleGroupMessages, handleToggleGroupMedia, handleRemoveGroup, handleChatsShared } from './handlers/groupArchive';
 import { handlePrivateArchive, handleAddPrivateChat, handleSelectPrivateChat, handlePrivateChatManage, handleTogglePrivateMessages, handleTogglePrivateMedia, handleRemovePrivateChat, handleUsersShared } from './handlers/privateArchive';
+import { handleExportMenu, handleSelectUserForExport, handleExportJSON, handleExportTEXT, handleExportPDF } from './handlers/export';
 import { createStarsInvoice, handleSuccessfulPayment, handlePreCheckoutQuery, createMonitoringInvoice, handleMonitoringPayment } from './payments';
 import { handleCodeCallback } from './controllers/codeInput';
 import { handleTextInput } from './controllers/textInput';
@@ -95,6 +96,36 @@ export const createBot = (): Telegraf => {
   bot.action('parental_control', handleParentalControl);
   bot.action('pc_connect_child', handleConnectChild);
   bot.action('pc_my_children', handleMyChildren);
+  
+  bot.action('export_menu', handleExportMenu);
+  
+  bot.action(/^export_user_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleSelectUserForExport(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^export_format_json_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleExportJSON(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^export_format_text_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleExportTEXT(ctx, match[1]);
+    }
+  });
+  
+  bot.action(/^export_format_pdf_(-?\d+)$/, async (ctx) => {
+    const match = ctx.match;
+    if (match && match[1]) {
+      await handleExportPDF(ctx, match[1]);
+    }
+  });
   
   bot.action('group_archive', handleGroupArchive);
   bot.action('ga_add_group', handleAddGroup);
